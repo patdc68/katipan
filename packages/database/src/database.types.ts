@@ -35,6 +35,69 @@ export type Database = {
         }
         Relationships: []
       }
+      wedding_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by_user_id: string | null
+          created_at: string
+          created_by_user_id: string
+          expires_at: string
+          id: string
+          intended_role: Database["public"]["Enums"]["wedding_membership_role"]
+          invited_email: string | null
+          revoked_at: string | null
+          status: Database["public"]["Enums"]["wedding_invitation_status"]
+          target_person_id: string | null
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string
+          created_by_user_id: string
+          expires_at: string
+          id?: string
+          intended_role: Database["public"]["Enums"]["wedding_membership_role"]
+          invited_email?: string | null
+          revoked_at?: string | null
+          status?: Database["public"]["Enums"]["wedding_invitation_status"]
+          target_person_id?: string | null
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          expires_at?: string
+          id?: string
+          intended_role?: Database["public"]["Enums"]["wedding_membership_role"]
+          invited_email?: string | null
+          revoked_at?: string | null
+          status?: Database["public"]["Enums"]["wedding_invitation_status"]
+          target_person_id?: string | null
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_invitations_target_person_same_wedding_fkey"
+            columns: ["wedding_id", "target_person_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_people"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "wedding_invitations_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wedding_memberships: {
         Row: {
           created_at: string
@@ -205,7 +268,98 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_wedding_invitation: {
+        Args: { p_raw_token: string }
+        Returns: {
+          already_accepted: boolean
+          invitation_id: string
+          membership_id: string
+          ownership_transitioned: boolean
+          person_id: string
+          wedding_id: string
+        }[]
+      }
+      create_coordinator_managed_wedding: {
+        Args: {
+          p_ceremony_style?: Database["public"]["Enums"]["ceremony_style"]
+          p_estimated_guest_count?: number
+          p_general_location?: string
+          p_partner_1_display_name: string
+          p_partner_2_display_name: string
+          p_timezone?: string
+          p_wedding_date?: string
+          p_wedding_display_name: string
+        }
+        Returns: {
+          partner_1_person_id: string
+          partner_2_person_id: string
+          wedding_id: string
+        }[]
+      }
+      create_couple_wedding: {
+        Args: {
+          p_ceremony_style?: Database["public"]["Enums"]["ceremony_style"]
+          p_current_partner_display_name: string
+          p_estimated_guest_count?: number
+          p_general_location?: string
+          p_second_partner_display_name?: string
+          p_timezone?: string
+          p_wedding_date?: string
+          p_wedding_display_name: string
+        }
+        Returns: {
+          current_person_id: string
+          membership_id: string
+          second_partner_person_id: string
+          wedding_id: string
+        }[]
+      }
+      issue_partner_owner_invitation: {
+        Args: {
+          p_invited_email?: string
+          p_target_person_id: string
+          p_wedding_id: string
+        }
+        Returns: {
+          invitation_expires_at: string
+          invitation_id: string
+          raw_token: string
+        }[]
+      }
+      leave_wedding: {
+        Args: { p_wedding_id: string }
+        Returns: {
+          ended_at: string
+          membership_id: string
+          membership_status: Database["public"]["Enums"]["wedding_membership_status"]
+          wedding_id: string
+        }[]
+      }
+      promote_wedding_member_to_owner: {
+        Args: { p_target_membership_id: string; p_wedding_id: string }
+        Returns: {
+          membership_id: string
+          membership_role: Database["public"]["Enums"]["wedding_membership_role"]
+          wedding_id: string
+        }[]
+      }
+      remove_wedding_member: {
+        Args: { p_target_membership_id: string; p_wedding_id: string }
+        Returns: {
+          ended_at: string
+          membership_id: string
+          membership_status: Database["public"]["Enums"]["wedding_membership_status"]
+          wedding_id: string
+        }[]
+      }
+      revoke_wedding_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: {
+          invitation_id: string
+          invitation_status: Database["public"]["Enums"]["wedding_invitation_status"]
+          wedding_id: string
+        }[]
+      }
     }
     Enums: {
       ceremony_style:
@@ -216,6 +370,7 @@ export type Database = {
         | "DESTINATION"
         | "OTHER"
         | "UNDECIDED"
+      wedding_invitation_status: "PENDING" | "ACCEPTED" | "REVOKED"
       wedding_membership_role:
         | "OWNER"
         | "FULL_COORDINATOR"
@@ -361,6 +516,7 @@ export const Constants = {
         "OTHER",
         "UNDECIDED",
       ],
+      wedding_invitation_status: ["PENDING", "ACCEPTED", "REVOKED"],
       wedding_membership_role: [
         "OWNER",
         "FULL_COORDINATOR",
