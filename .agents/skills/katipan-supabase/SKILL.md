@@ -77,13 +77,15 @@ For invitation access and Guest Passes:
 
 ## Storage rules
 
-Use the provider-neutral attachment model.
+Use Supabase Storage as the only V1 file-storage provider.
 
-Do not hardcode business entities to permanent Supabase Storage URLs.
+Store centralized Attachment metadata in PostgreSQL and file bytes only in Supabase Storage. Domain records reference Attachment IDs rather than permanent URLs.
 
-Temporary signed URLs are generated on demand and are not persistent domain data.
+Use authenticated access for private objects. Future delivery workflows may generate short-lived signed URLs on demand, but URLs are not persistent domain data.
 
-If Supabase Storage is used initially, keep the interface compatible with a future MEGA S4/S3-style provider.
+Alternative storage providers are out of scope. Do not introduce MEGA, MEGA S4, generic S3, provider selection, or provider-adapter abstractions without a future explicit measured requirement.
+
+Never expose Supabase service-role or secret keys in Expo, browser, or other public clients.
 
 Avoid proxying large object bytes through Edge Functions unless server-side processing is actually required.
 

@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      attachments: {
+        Row: {
+          available_at: string | null
+          bucket_id: string
+          checksum_sha256: string | null
+          content_type: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          object_path: string
+          original_filename: string
+          size_bytes: number | null
+          status: Database["public"]["Enums"]["attachment_status"]
+          updated_at: string
+          uploaded_by_user_id: string | null
+          visibility: Database["public"]["Enums"]["attachment_visibility"]
+          wedding_id: string
+        }
+        Insert: {
+          available_at?: string | null
+          bucket_id?: string
+          checksum_sha256?: string | null
+          content_type: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          object_path: string
+          original_filename: string
+          size_bytes?: number | null
+          status?: Database["public"]["Enums"]["attachment_status"]
+          updated_at?: string
+          uploaded_by_user_id?: string | null
+          visibility: Database["public"]["Enums"]["attachment_visibility"]
+          wedding_id: string
+        }
+        Update: {
+          available_at?: string | null
+          bucket_id?: string
+          checksum_sha256?: string | null
+          content_type?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          object_path?: string
+          original_filename?: string
+          size_bytes?: number | null
+          status?: Database["public"]["Enums"]["attachment_status"]
+          updated_at?: string
+          uploaded_by_user_id?: string | null
+          visibility?: Database["public"]["Enums"]["attachment_visibility"]
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -279,6 +341,18 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      confirm_attachment_uploaded: {
+        Args: {
+          p_attachment_id: string
+          p_checksum_sha256?: string
+          p_size_bytes: number
+        }
+        Returns: {
+          attachment_id: string
+          attachment_status: Database["public"]["Enums"]["attachment_status"]
+          available_at: string
+        }[]
+      }
       create_coordinator_managed_wedding: {
         Args: {
           p_ceremony_style?: Database["public"]["Enums"]["ceremony_style"]
@@ -335,6 +409,14 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      mark_attachment_deleted: {
+        Args: { p_attachment_id: string }
+        Returns: {
+          attachment_id: string
+          attachment_status: Database["public"]["Enums"]["attachment_status"]
+          deleted_at: string
+        }[]
+      }
       promote_wedding_member_to_owner: {
         Args: { p_target_membership_id: string; p_wedding_id: string }
         Returns: {
@@ -352,6 +434,19 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      reserve_attachment: {
+        Args: {
+          p_content_type: string
+          p_original_filename: string
+          p_visibility: Database["public"]["Enums"]["attachment_visibility"]
+          p_wedding_id: string
+        }
+        Returns: {
+          attachment_id: string
+          bucket_id: string
+          object_path: string
+        }[]
+      }
       revoke_wedding_invitation: {
         Args: { p_invitation_id: string }
         Returns: {
@@ -362,6 +457,13 @@ export type Database = {
       }
     }
     Enums: {
+      attachment_status: "PENDING_UPLOAD" | "AVAILABLE" | "DELETED"
+      attachment_visibility:
+        | "PUBLIC"
+        | "GUEST_VISIBLE"
+        | "WEDDING_MEMBER_PRIVATE"
+        | "OWNER_PRIVATE"
+        | "FINANCIAL_PRIVATE"
       ceremony_style:
         | "RELIGIOUS"
         | "CIVIL"
@@ -507,6 +609,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      attachment_status: ["PENDING_UPLOAD", "AVAILABLE", "DELETED"],
+      attachment_visibility: [
+        "PUBLIC",
+        "GUEST_VISIBLE",
+        "WEDDING_MEMBER_PRIVATE",
+        "OWNER_PRIVATE",
+        "FINANCIAL_PRIVATE",
+      ],
       ceremony_style: [
         "RELIGIOUS",
         "CIVIL",
