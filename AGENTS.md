@@ -18,8 +18,7 @@ Preferred architecture:
 - Web: Next.js + TypeScript
 - Backend: Supabase Postgres, Auth, RLS, Realtime where justified, Edge Functions
 - Validation: Zod
-- Storage: provider-neutral attachment abstraction
-- Initial storage may use Supabase Storage; architecture must remain compatible with MEGA S4 or another S3-compatible provider later
+- Storage: Supabase Storage for V1, with centralized PostgreSQL attachment metadata
 
 Before installing dependencies, inspect the existing repository and package manager. Do not replace an established package manager or project structure without a reason.
 
@@ -230,16 +229,21 @@ Guest-facing schedule changes require separate confirmation.
 
 ## Attachments / storage
 
-Domain tables should reference provider-neutral attachment metadata.
+Supabase Storage is the only V1 file-storage provider.
 
-Do not permanently store temporary signed URLs.
+PostgreSQL stores centralized Attachment metadata, never file bytes. Domain records reference Attachment IDs rather than permanent URLs, and durable object identity is the Supabase Storage bucket plus object path.
+
+Private objects use authenticated access and may use short-lived signed URLs in future delivery workflows. Do not persist temporary signed URLs or permanent authenticated/public URLs.
+
+Alternative storage providers are out of scope. Do not introduce MEGA, MEGA S4, generic S3, provider-selection, or provider-adapter abstractions without a future explicit measured requirement.
+
+Never expose Supabase service-role or secret keys in Expo, browser, or other public clients.
 
 Recommended metadata includes:
 
 - wedding_id
-- storage_provider
-- bucket/container
-- object_key
+- bucket_id
+- object_path
 - original_filename
 - MIME/content type
 - byte size
@@ -247,7 +251,7 @@ Recommended metadata includes:
 - checksum
 - encryption version if app-level encryption is later added
 
-Do not tightly couple Supplier, Guest, Dress Code, or Wedding Website tables to Supabase Storage-specific paths.
+Supplier, Guest, Dress Code, Wedding Website, and other domain tables should reference Attachment IDs rather than duplicating Storage locators.
 
 ## Scope discipline
 
