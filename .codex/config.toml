@@ -1,0 +1,29 @@
+# Project-scoped Codex configuration for KATIPAN.
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+sandbox_mode = "workspace-write"
+
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp?project_ref=fslwqgfuzzgsshkotfpn&features=docs,database,debugging,development,functions,storage"
+auth = "oauth"
+
+scopes = [
+  "projects:read",
+  "database:read",
+  "database:write",
+  "analytics:read",
+  "edge_functions:read",
+  "edge_functions:write",
+  "environment:read",
+  "environment:write",
+  "storage:read",
+  "storage:write"
+]
+
+default_tools_approval_mode = "approve"
+startup_timeout_sec = 60
+tool_timeout_sec = 120
+
+# Keep false until the first OAuth login succeeds.
+# After authentication is stable, consider setting this to true.
+required = false

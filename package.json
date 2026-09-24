@@ -1,0 +1,32 @@
+{
+  "name": "katipan",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KATIPAN wedding-planning ecosystem",
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:mobile": "npm run start --workspace=@katipan/mobile",
+    "dev:web": "npm run dev --workspace=@katipan/web",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "supabase:reset": "supabase db reset --local",
+    "db:types": "supabase gen types typescript --local --schema public > packages/database/src/database.types.ts",
+    "db:types:remote": "supabase gen types typescript --project-id fslwqgfuzzgsshkotfpn --schema public > packages/database/src/database.types.ts"
+  },
+  "devDependencies": {
+    "supabase": "2.117.0",
+    "vitest": "5.0.1"
+  }
+}

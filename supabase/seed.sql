@@ -1,0 +1,2 @@
+-- Intentionally empty during the Phase 1B repository bootstrap.
+-- Add only approved, reproducible reference data in later migrations or seed updates.
