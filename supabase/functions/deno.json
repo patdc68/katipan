@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "dom", "dom.iterable", "esnext"],
+    "strict": true
+  },
+  "tasks": {
+    "check": "deno check google-places-search/index.ts google-place-details/index.ts tests/google_places.test.ts",
+    "test": "deno test tests/google_places.test.ts"
+  }
+}
