@@ -679,6 +679,131 @@ export type Database = {
           },
         ]
       }
+      wedding_place_purposes: {
+        Row: {
+          created_at: string
+          guest_notes: string | null
+          guest_visible: boolean
+          id: string
+          place_id: string
+          private_notes: string | null
+          purpose: Database["public"]["Enums"]["wedding_place_purpose"]
+          purpose_label: string | null
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          guest_notes?: string | null
+          guest_visible?: boolean
+          id?: string
+          place_id: string
+          private_notes?: string | null
+          purpose: Database["public"]["Enums"]["wedding_place_purpose"]
+          purpose_label?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          guest_notes?: string | null
+          guest_visible?: boolean
+          id?: string
+          place_id?: string
+          private_notes?: string | null
+          purpose?: Database["public"]["Enums"]["wedding_place_purpose"]
+          purpose_label?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_place_purposes_place_same_wedding_fkey"
+            columns: ["wedding_id", "place_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_places"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "wedding_place_purposes_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wedding_places: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by_user_id: string | null
+          custom_address: string | null
+          custom_latitude: number | null
+          custom_longitude: number | null
+          custom_name: string | null
+          google_place_id: string | null
+          google_place_id_refreshed_at: string | null
+          guest_notes: string | null
+          id: string
+          place_type: Database["public"]["Enums"]["wedding_place_type"]
+          private_notes: string | null
+          source: Database["public"]["Enums"]["wedding_place_source"]
+          updated_at: string
+          user_label: string | null
+          wedding_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          custom_address?: string | null
+          custom_latitude?: number | null
+          custom_longitude?: number | null
+          custom_name?: string | null
+          google_place_id?: string | null
+          google_place_id_refreshed_at?: string | null
+          guest_notes?: string | null
+          id?: string
+          place_type?: Database["public"]["Enums"]["wedding_place_type"]
+          private_notes?: string | null
+          source: Database["public"]["Enums"]["wedding_place_source"]
+          updated_at?: string
+          user_label?: string | null
+          wedding_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          custom_address?: string | null
+          custom_latitude?: number | null
+          custom_longitude?: number | null
+          custom_name?: string | null
+          google_place_id?: string | null
+          google_place_id_refreshed_at?: string | null
+          guest_notes?: string | null
+          id?: string
+          place_type?: Database["public"]["Enums"]["wedding_place_type"]
+          private_notes?: string | null
+          source?: Database["public"]["Enums"]["wedding_place_source"]
+          updated_at?: string
+          user_label?: string | null
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_places_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       weddings: {
         Row: {
           ceremony_style: Database["public"]["Enums"]["ceremony_style"]
@@ -772,6 +897,7 @@ export type Database = {
         }
         Returns: string
       }
+      archive_wedding_place: { Args: { p_place_id: string }; Returns: string }
       claim_guest_allowance: {
         Args: { p_allowance_id: string; p_guest_id: string }
         Returns: {
@@ -828,6 +954,31 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      create_custom_wedding_place: {
+        Args: {
+          p_custom_address?: string
+          p_custom_latitude?: number
+          p_custom_longitude?: number
+          p_custom_name: string
+          p_guest_notes?: string
+          p_place_type?: Database["public"]["Enums"]["wedding_place_type"]
+          p_private_notes?: string
+          p_user_label?: string
+          p_wedding_id: string
+        }
+        Returns: string
+      }
+      create_google_wedding_place: {
+        Args: {
+          p_google_place_id: string
+          p_guest_notes?: string
+          p_place_type?: Database["public"]["Enums"]["wedding_place_type"]
+          p_private_notes?: string
+          p_user_label?: string
+          p_wedding_id: string
+        }
+        Returns: string
+      }
       create_guest: {
         Args: {
           p_accessibility_assistance_note?: string
@@ -878,6 +1029,10 @@ export type Database = {
           deleted_at: string
         }[]
       }
+      mark_google_wedding_place_refreshed: {
+        Args: { p_place_id: string }
+        Returns: string
+      }
       mark_household_invitation_sent: {
         Args: { p_household_id: string }
         Returns: string
@@ -902,6 +1057,13 @@ export type Database = {
           membership_status: Database["public"]["Enums"]["wedding_membership_status"]
           wedding_id: string
         }[]
+      }
+      remove_wedding_place_purpose: {
+        Args: {
+          p_place_id: string
+          p_purpose: Database["public"]["Enums"]["wedding_place_purpose"]
+        }
+        Returns: boolean
       }
       reserve_attachment: {
         Args: {
@@ -943,6 +1105,18 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      set_wedding_place_purpose: {
+        Args: {
+          p_guest_notes?: string
+          p_guest_visible?: boolean
+          p_place_id: string
+          p_private_notes?: string
+          p_purpose: Database["public"]["Enums"]["wedding_place_purpose"]
+          p_purpose_label?: string
+          p_sort_order?: number
+        }
+        Returns: string
+      }
       update_guest_person: {
         Args: {
           p_display_name: string
@@ -952,6 +1126,20 @@ export type Database = {
           p_last_name?: string
           p_phone?: string
           p_wedding_id: string
+        }
+        Returns: string
+      }
+      update_wedding_place_context: {
+        Args: {
+          p_custom_address: string
+          p_custom_latitude: number
+          p_custom_longitude: number
+          p_custom_name: string
+          p_guest_notes: string
+          p_place_id: string
+          p_place_type: Database["public"]["Enums"]["wedding_place_type"]
+          p_private_notes: string
+          p_user_label: string
         }
         Returns: string
       }
@@ -988,6 +1176,30 @@ export type Database = {
       wedding_membership_status: "ACTIVE" | "LEFT" | "REMOVED"
       wedding_origin: "COUPLE_CREATED" | "COORDINATOR_CREATED"
       wedding_ownership_mode: "COORDINATOR_MANAGED" | "COUPLE_OWNED"
+      wedding_place_purpose:
+        | "CEREMONY"
+        | "RECEPTION"
+        | "ACCOMMODATION"
+        | "PRENUP"
+        | "GETTING_READY"
+        | "REHEARSAL"
+        | "AFTER_PARTY"
+        | "TRANSPORT"
+        | "OTHER"
+      wedding_place_source: "GOOGLE_PLACES" | "CUSTOM"
+      wedding_place_type:
+        | "CHURCH_RELIGIOUS"
+        | "GARDEN"
+        | "BEACH"
+        | "RESORT"
+        | "HOTEL"
+        | "EVENT_SPACE"
+        | "RESTAURANT"
+        | "PRIVATE_ESTATE"
+        | "HOME"
+        | "CIVIL_VENUE"
+        | "DESTINATION"
+        | "OTHER"
       wedding_status: "DRAFT" | "ACTIVE" | "COMPLETED" | "ARCHIVED"
     }
     CompositeTypes: {
@@ -1151,6 +1363,32 @@ export const Constants = {
       wedding_membership_status: ["ACTIVE", "LEFT", "REMOVED"],
       wedding_origin: ["COUPLE_CREATED", "COORDINATOR_CREATED"],
       wedding_ownership_mode: ["COORDINATOR_MANAGED", "COUPLE_OWNED"],
+      wedding_place_purpose: [
+        "CEREMONY",
+        "RECEPTION",
+        "ACCOMMODATION",
+        "PRENUP",
+        "GETTING_READY",
+        "REHEARSAL",
+        "AFTER_PARTY",
+        "TRANSPORT",
+        "OTHER",
+      ],
+      wedding_place_source: ["GOOGLE_PLACES", "CUSTOM"],
+      wedding_place_type: [
+        "CHURCH_RELIGIOUS",
+        "GARDEN",
+        "BEACH",
+        "RESORT",
+        "HOTEL",
+        "EVENT_SPACE",
+        "RESTAURANT",
+        "PRIVATE_ESTATE",
+        "HOME",
+        "CIVIL_VENUE",
+        "DESTINATION",
+        "OTHER",
+      ],
       wedding_status: ["DRAFT", "ACTIVE", "COMPLETED", "ARCHIVED"],
     },
   },
