@@ -24,6 +24,5 @@ default_tools_approval_mode = "approve"
 startup_timeout_sec = 60
 tool_timeout_sec = 120
 
-# Keep false until the first OAuth login succeeds.
-# After authentication is stable, consider setting this to true.
-required = false
+# The project-scoped OAuth connection is verified and required for backend work.
+required = true
