@@ -21,7 +21,7 @@ alter default privileges for role postgres in schema public
   on functions
   from anon, authenticated, service_role;
 
-alter default privileges for role postgres in schema public
+alter default privileges for role postgres
   revoke execute
   on functions
   from public;
