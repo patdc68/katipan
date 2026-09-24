@@ -150,8 +150,8 @@ select ok(
 );
 
 select ok(
-  not has_schema_privilege('authenticated', 'private', 'USAGE'),
-  'authenticated cannot use the private schema'
+  has_schema_privilege('authenticated', 'private', 'USAGE'),
+  'authenticated has private schema usage required by explicitly granted RLS helpers'
 );
 
 select ok(
