@@ -1369,6 +1369,67 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string
+          category: Database["public"]["Enums"]["notification_category"]
+          created_at: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          read_at: string | null
+          recipient_user_id: string
+          title: string
+          wedding_id: string | null
+        }
+        Insert: {
+          body: string
+          category: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          metadata?: Json
+          read_at?: string | null
+          recipient_user_id: string
+          title: string
+          wedding_id?: string | null
+        }
+        Update: {
+          body?: string
+          category?: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          metadata?: Json
+          read_at?: string | null
+          recipient_user_id?: string
+          title?: string
+          wedding_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "notifications_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "notifications_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_receipt_attachments: {
         Row: {
           attachment_id: string
@@ -2412,6 +2473,105 @@ export type Database = {
           },
         ]
       }
+      wedding_notification_category_preferences: {
+        Row: {
+          category: Database["public"]["Enums"]["notification_category"]
+          created_at: string
+          enabled: boolean
+          updated_at: string
+          user_id: string
+          wedding_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          enabled?: boolean
+          updated_at?: string
+          user_id: string
+          wedding_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_notification_category_preferenc_wedding_id_user_id_fkey"
+            columns: ["wedding_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_notification_preferences"
+            referencedColumns: ["wedding_id", "user_id"]
+          },
+        ]
+      }
+      wedding_notification_preferences: {
+        Row: {
+          created_at: string
+          email_enabled: boolean
+          notifications_enabled: boolean
+          push_enabled: boolean
+          quiet_hours_enabled: boolean
+          quiet_hours_end: string
+          quiet_hours_start: string
+          timezone: string
+          updated_at: string
+          user_id: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_enabled?: boolean
+          notifications_enabled?: boolean
+          push_enabled?: boolean
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          email_enabled?: boolean
+          notifications_enabled?: boolean
+          push_enabled?: boolean
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_notification_preferences_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_notification_preferences_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_notification_preferences_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wedding_partners: {
         Row: {
           created_at: string
@@ -3054,6 +3214,18 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      claim_notification_deliveries: {
+        Args: { p_limit?: number }
+        Returns: {
+          body: string
+          channel: Database["public"]["Enums"]["notification_delivery_channel"]
+          claim_token: string
+          notification_id: string
+          outbox_id: string
+          recipient_user_id: string
+          title: string
+        }[]
+      }
       confirm_attachment_uploaded: {
         Args: {
           p_attachment_id: string
@@ -3230,7 +3402,32 @@ export type Database = {
       }
       delete_seating_seat: { Args: { p_seat_id: string }; Returns: undefined }
       delete_seating_table: { Args: { p_table_id: string }; Returns: undefined }
+      enqueue_notification: {
+        Args: {
+          p_body: string
+          p_category: Database["public"]["Enums"]["notification_category"]
+          p_idempotency_key: string
+          p_metadata?: Json
+          p_recipient_user_id: string
+          p_title: string
+          p_wedding_id: string
+        }
+        Returns: string
+      }
+      finish_notification_delivery: {
+        Args: {
+          p_claim_token: string
+          p_error_code?: string
+          p_outbox_id: string
+          p_sent: boolean
+        }
+        Returns: boolean
+      }
       get_guest_pass: { Args: { p_guest_id: string }; Returns: Json }
+      get_wedding_notification_preferences: {
+        Args: { p_wedding_id: string }
+        Returns: Json
+      }
       guest_pass_lookup: {
         Args: { p_token: string; p_wedding_id: string }
         Returns: Json
@@ -3301,6 +3498,10 @@ export type Database = {
         Args: { p_household_id: string }
         Returns: string
       }
+      mark_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: boolean
+      }
       mark_supplier_payment_paid: {
         Args: {
           p_paid_at?: string
@@ -3313,6 +3514,32 @@ export type Database = {
       mark_supplier_payment_unpaid: {
         Args: { p_payment_id: string }
         Returns: Database["public"]["Enums"]["supplier_payment_status"]
+      }
+      mark_wedding_notifications_read: {
+        Args: { p_wedding_id: string }
+        Returns: number
+      }
+      mute_wedding_notifications: {
+        Args: { p_muted: boolean; p_wedding_id: string }
+        Returns: {
+          created_at: string
+          email_enabled: boolean
+          notifications_enabled: boolean
+          push_enabled: boolean
+          quiet_hours_enabled: boolean
+          quiet_hours_end: string
+          quiet_hours_start: string
+          timezone: string
+          updated_at: string
+          user_id: string
+          wedding_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wedding_notification_preferences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       promote_wedding_member_to_owner: {
         Args: { p_target_membership_id: string; p_wedding_id: string }
@@ -3428,6 +3655,58 @@ export type Database = {
           p_visibility: Database["public"]["Enums"]["seating_visibility"]
         }
         Returns: undefined
+      }
+      set_wedding_notification_category: {
+        Args: {
+          p_category: Database["public"]["Enums"]["notification_category"]
+          p_enabled: boolean
+          p_wedding_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["notification_category"]
+          created_at: string
+          enabled: boolean
+          updated_at: string
+          user_id: string
+          wedding_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wedding_notification_category_preferences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_wedding_notification_preferences: {
+        Args: {
+          p_email_enabled?: boolean
+          p_notifications_enabled?: boolean
+          p_push_enabled?: boolean
+          p_quiet_hours_enabled?: boolean
+          p_quiet_hours_end?: string
+          p_quiet_hours_start?: string
+          p_timezone?: string
+          p_wedding_id: string
+        }
+        Returns: {
+          created_at: string
+          email_enabled: boolean
+          notifications_enabled: boolean
+          push_enabled: boolean
+          quiet_hours_enabled: boolean
+          quiet_hours_end: string
+          quiet_hours_start: string
+          timezone: string
+          updated_at: string
+          user_id: string
+          wedding_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wedding_notification_preferences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_wedding_place_purpose: {
         Args: {
@@ -3604,6 +3883,21 @@ export type Database = {
         | "NO_RESPONSE"
         | "PARTIALLY_RESPONDED"
         | "RESPONDED"
+      notification_category:
+        | "PLANNING_TASK"
+        | "RSVP"
+        | "GUEST_UPDATE"
+        | "PAYMENT_DUE"
+        | "WEDDING_DAY"
+        | "MEMBERSHIP"
+        | "SYSTEM"
+      notification_delivery_channel: "EMAIL" | "PUSH"
+      notification_delivery_status:
+        | "PENDING"
+        | "CLAIMED"
+        | "SENT"
+        | "FAILED"
+        | "SKIPPED"
       planning_task_priority: "LOW" | "NORMAL" | "HIGH" | "URGENT"
       planning_task_status: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
       seating_table_shape: "ROUND" | "RECTANGULAR" | "SQUARE" | "OVAL" | "OTHER"
@@ -3824,6 +4118,23 @@ export const Constants = {
         "NO_RESPONSE",
         "PARTIALLY_RESPONDED",
         "RESPONDED",
+      ],
+      notification_category: [
+        "PLANNING_TASK",
+        "RSVP",
+        "GUEST_UPDATE",
+        "PAYMENT_DUE",
+        "WEDDING_DAY",
+        "MEMBERSHIP",
+        "SYSTEM",
+      ],
+      notification_delivery_channel: ["EMAIL", "PUSH"],
+      notification_delivery_status: [
+        "PENDING",
+        "CLAIMED",
+        "SENT",
+        "FAILED",
+        "SKIPPED",
       ],
       planning_task_priority: ["LOW", "NORMAL", "HIGH", "URGENT"],
       planning_task_status: ["TODO", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
