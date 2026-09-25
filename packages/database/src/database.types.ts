@@ -1296,6 +1296,170 @@ export type Database = {
           },
         ]
       }
+      planning_task_assignees: {
+        Row: {
+          assigned_at: string
+          assigned_by_user_id: string | null
+          membership_id: string
+          task_id: string
+          wedding_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by_user_id?: string | null
+          membership_id: string
+          task_id: string
+          wedding_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by_user_id?: string | null
+          membership_id?: string
+          task_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_task_assignees_membership_same_wedding_fkey"
+            columns: ["wedding_id", "membership_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_memberships"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "planning_task_assignees_task_same_wedding_fkey"
+            columns: ["wedding_id", "task_id"]
+            isOneToOne: false
+            referencedRelation: "planning_tasks"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      planning_task_dependencies: {
+        Row: {
+          created_at: string
+          created_by_user_id: string | null
+          depends_on_task_id: string
+          task_id: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id?: string | null
+          depends_on_task_id: string
+          task_id: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string | null
+          depends_on_task_id?: string
+          task_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_task_dependencies_prerequisite_same_wedding_fkey"
+            columns: ["wedding_id", "depends_on_task_id"]
+            isOneToOne: false
+            referencedRelation: "planning_tasks"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "planning_task_dependencies_task_same_wedding_fkey"
+            columns: ["wedding_id", "task_id"]
+            isOneToOne: false
+            referencedRelation: "planning_tasks"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      planning_tasks: {
+        Row: {
+          category_id: string | null
+          completed_at: string | null
+          completed_by_user_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: Database["public"]["Enums"]["planning_task_priority"]
+          private_notes: string | null
+          sort_order: number
+          start_date: string | null
+          status: Database["public"]["Enums"]["planning_task_status"]
+          title: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          completed_at?: string | null
+          completed_by_user_id?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["planning_task_priority"]
+          private_notes?: string | null
+          sort_order?: number
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["planning_task_status"]
+          title: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          category_id?: string | null
+          completed_at?: string | null
+          completed_by_user_id?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["planning_task_priority"]
+          private_notes?: string | null
+          sort_order?: number
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["planning_task_status"]
+          title?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_tasks_category_same_wedding_fkey"
+            columns: ["wedding_id", "category_id"]
+            isOneToOne: false
+            referencedRelation: "task_categories"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "planning_tasks_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "planning_tasks_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "planning_tasks_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1500,6 +1664,55 @@ export type Database = {
           },
           {
             foreignKeyName: "suppliers_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_categories_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "task_categories_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "task_categories_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "weddings"
@@ -2222,9 +2435,24 @@ export type Database = {
         }
         Returns: string
       }
+      add_planning_task_dependency: {
+        Args: { p_depends_on_task_id: string; p_task_id: string }
+        Returns: boolean
+      }
       archive_wedding_place: { Args: { p_place_id: string }; Returns: string }
+      assign_planning_task: {
+        Args: { p_membership_id: string; p_task_id: string }
+        Returns: boolean
+      }
       cancel_supplier_payment: {
         Args: { p_payment_id: string }
+        Returns: string
+      }
+      change_planning_task_status: {
+        Args: {
+          p_status: Database["public"]["Enums"]["planning_task_status"]
+          p_task_id: string
+        }
         Returns: string
       }
       claim_guest_allowance: {
@@ -2343,6 +2571,20 @@ export type Database = {
         Args: { p_display_name: string; p_notes?: string; p_wedding_id: string }
         Returns: string
       }
+      create_planning_task: {
+        Args: {
+          p_category_id: string
+          p_description: string
+          p_due_date: string
+          p_priority: Database["public"]["Enums"]["planning_task_priority"]
+          p_private_notes: string
+          p_sort_order: number
+          p_start_date: string
+          p_title: string
+          p_wedding_id: string
+        }
+        Returns: string
+      }
       create_supplier: {
         Args: {
           p_category: string
@@ -2440,6 +2682,10 @@ export type Database = {
         Args: { p_allowance_id: string; p_guest_id: string }
         Returns: undefined
       }
+      remove_planning_task_dependency: {
+        Args: { p_depends_on_task_id: string; p_task_id: string }
+        Returns: boolean
+      }
       remove_wedding_member: {
         Args: { p_target_membership_id: string; p_wedding_id: string }
         Returns: {
@@ -2508,6 +2754,10 @@ export type Database = {
         }
         Returns: string
       }
+      unassign_planning_task: {
+        Args: { p_membership_id: string; p_task_id: string }
+        Returns: boolean
+      }
       update_budget_item: {
         Args: {
           p_actual_amount: number
@@ -2531,6 +2781,20 @@ export type Database = {
           p_last_name?: string
           p_phone?: string
           p_wedding_id: string
+        }
+        Returns: string
+      }
+      update_planning_task: {
+        Args: {
+          p_category_id: string
+          p_description: string
+          p_due_date: string
+          p_priority: Database["public"]["Enums"]["planning_task_priority"]
+          p_private_notes: string
+          p_sort_order: number
+          p_start_date: string
+          p_task_id: string
+          p_title: string
         }
         Returns: string
       }
@@ -2599,6 +2863,8 @@ export type Database = {
         | "NO_RESPONSE"
         | "PARTIALLY_RESPONDED"
         | "RESPONDED"
+      planning_task_priority: "LOW" | "NORMAL" | "HIGH" | "URGENT"
+      planning_task_status: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
       supplier_payment_status: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED"
       supplier_status:
         | "PROSPECT"
@@ -2793,6 +3059,8 @@ export const Constants = {
         "PARTIALLY_RESPONDED",
         "RESPONDED",
       ],
+      planning_task_priority: ["LOW", "NORMAL", "HIGH", "URGENT"],
+      planning_task_status: ["TODO", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
       supplier_payment_status: ["PENDING", "PAID", "OVERDUE", "CANCELLED"],
       supplier_status: [
         "PROSPECT",
