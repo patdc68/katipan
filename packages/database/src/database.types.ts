@@ -2959,6 +2959,11 @@ export type Database = {
       }
       delete_seating_seat: { Args: { p_seat_id: string }; Returns: undefined }
       delete_seating_table: { Args: { p_table_id: string }; Returns: undefined }
+      get_guest_pass: { Args: { p_guest_id: string }; Returns: Json }
+      guest_pass_lookup: {
+        Args: { p_token: string; p_wedding_id: string }
+        Returns: Json
+      }
       guest_submit_rsvp: {
         Args: {
           p_dietary_notes?: string
@@ -2975,6 +2980,7 @@ export type Database = {
         Args: { p_slug: string; p_token?: string }
         Returns: Json
       }
+      issue_guest_pass: { Args: { p_guest_id: string }; Returns: Json }
       issue_household_website_token: {
         Args: { p_expires_at?: string; p_household_id: string }
         Returns: string
@@ -3107,6 +3113,7 @@ export type Database = {
         Args: { p_household_id: string }
         Returns: undefined
       }
+      revoke_guest_pass: { Args: { p_guest_id: string }; Returns: boolean }
       revoke_household_website_token: {
         Args: { p_household_id: string }
         Returns: undefined
@@ -3119,6 +3126,7 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      rotate_guest_pass: { Args: { p_guest_id: string }; Returns: Json }
       seat_guest: {
         Args: {
           p_event_id: string
