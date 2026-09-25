@@ -7,7 +7,7 @@
     "strict": true
   },
   "tasks": {
-    "check": "deno check google-places-search/index.ts google-place-details/index.ts guest-wedding-guide/index.ts guest-rsvp/index.ts tests/google_places.test.ts tests/guest_website.test.ts",
-    "test": "deno test tests/google_places.test.ts tests/guest_website.test.ts"
+    "check": "deno check google-places-search/index.ts google-place-details/index.ts guest-wedding-guide/index.ts guest-rsvp/index.ts guest-pass-lookup/index.ts tests/google_places.test.ts tests/guest_website.test.ts tests/guest_pass_lookup.test.ts",
+    "test": "deno test tests/google_places.test.ts tests/guest_website.test.ts tests/guest_pass_lookup.test.ts"
   }
 }
