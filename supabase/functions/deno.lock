@@ -2,6 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@supabase/functions-js@*": "2.117.1",
+    "jsr:@supabase/functions-js@2.117.1": "2.117.1",
     "npm:openai@^4.52.5": "4.104.0"
   },
   "jsr": {
@@ -215,5 +216,10 @@
         "webidl-conversions"
       ]
     }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@supabase/functions-js@2.117.1"
+    ]
   }
 }
