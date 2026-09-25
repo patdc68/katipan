@@ -483,20 +483,31 @@ select extensions.throws_ok(
   $$select public.create_supplier('10000000-0000-0000-0000-000000000501', 'Denied Day Of', 'Test')$$,
   '42501',
   null,
-  'Day-of Coordinator has read-only Supplier/Budget/Payment access'
+  'Day-of Coordinator cannot manage finance records'
 );
 
 select extensions.ok(
-  (select count(*) from public.suppliers) >= 3
-  and (select count(*) from public.budget_items) = 2
-  and (select count(*) from public.supplier_payments) = 2,
-  'Day-of Coordinator can read Wedding finance records'
+  (select count(*) from public.suppliers) = 0
+  and (select count(*) from public.budget_categories) = 0
+  and (select count(*) from public.budget_items) = 0
+  and (select count(*) from public.supplier_payments) = 0
+  and (select count(*) from public.supplier_contract_attachments) = 0
+  and (select count(*) from public.payment_receipt_attachments) = 0
+  and (select count(*) from public.supplier_payment_schedule) = 0
+  and (select count(*) from public.wedding_budget_totals) = 0
+  and (select count(*) from public.wedding_payment_totals) = 0,
+  'Day-of Coordinator cannot read finance tables or projections'
 );
 
 select extensions.is(
   (select count(*) from public.attachments),
   1::bigint,
   'Day-of Coordinator cannot read FINANCIAL_PRIVATE Attachment metadata'
+);
+select extensions.is(
+  (select count(*) from public.weddings where id = '10000000-0000-0000-0000-000000000501'),
+  1::bigint,
+  'Day-of Coordinator retains non-financial Wedding access'
 );
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000504', true);
@@ -505,20 +516,31 @@ select extensions.throws_ok(
   $$select public.create_supplier('10000000-0000-0000-0000-000000000501', 'Denied Guest Coordinator', 'Test')$$,
   '42501',
   null,
-  'Guest Coordinator has read-only Supplier/Budget/Payment access'
+  'Guest Coordinator cannot manage finance records'
 );
 
 select extensions.ok(
-  (select count(*) from public.suppliers) >= 3
-  and (select count(*) from public.budget_items) = 2
-  and (select count(*) from public.supplier_payments) = 2,
-  'Guest Coordinator can read Wedding finance records'
+  (select count(*) from public.suppliers) = 0
+  and (select count(*) from public.budget_categories) = 0
+  and (select count(*) from public.budget_items) = 0
+  and (select count(*) from public.supplier_payments) = 0
+  and (select count(*) from public.supplier_contract_attachments) = 0
+  and (select count(*) from public.payment_receipt_attachments) = 0
+  and (select count(*) from public.supplier_payment_schedule) = 0
+  and (select count(*) from public.wedding_budget_totals) = 0
+  and (select count(*) from public.wedding_payment_totals) = 0,
+  'Guest Coordinator cannot read finance tables or projections'
 );
 
 select extensions.is(
   (select count(*) from public.attachments),
   1::bigint,
   'Guest Coordinator cannot read FINANCIAL_PRIVATE Attachment metadata'
+);
+select extensions.is(
+  (select count(*) from public.weddings where id = '10000000-0000-0000-0000-000000000501'),
+  1::bigint,
+  'Guest Coordinator retains non-financial Wedding access'
 );
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000505', true);
@@ -569,6 +591,8 @@ select extensions.ok(
   and not has_table_privilege('anon', 'public.budget_items', 'SELECT')
   and not has_table_privilege('anon', 'public.supplier_payments', 'SELECT')
   and not has_table_privilege('anon', 'public.supplier_payment_schedule', 'SELECT')
+  and not has_table_privilege('anon', 'public.wedding_budget_totals', 'SELECT')
+  and not has_table_privilege('anon', 'public.wedding_payment_totals', 'SELECT')
   and not has_function_privilege(
     'anon',
     'public.create_supplier(uuid,text,text,text,text,text,text,text,public.supplier_status)',

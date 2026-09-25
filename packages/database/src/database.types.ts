@@ -3181,6 +3181,15 @@ export type Database = {
       }
     }
     Functions: {
+      accept_coordinator_invitation: {
+        Args: { p_raw_token: string }
+        Returns: {
+          invitation_id: string
+          membership_id: string
+          membership_role: Database["public"]["Enums"]["wedding_membership_role"]
+          wedding_id: string
+        }[]
+      }
       accept_wedding_invitation: {
         Args: { p_raw_token: string }
         Returns: {
@@ -3272,6 +3281,30 @@ export type Database = {
       cancel_supplier_payment: {
         Args: { p_payment_id: string }
         Returns: string
+      }
+      change_coordinator_role: {
+        Args: {
+          p_new_role: Database["public"]["Enums"]["wedding_membership_role"]
+          p_target_membership_id: string
+          p_wedding_id: string
+        }
+        Returns: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          joined_at: string
+          role: Database["public"]["Enums"]["wedding_membership_role"]
+          status: Database["public"]["Enums"]["wedding_membership_status"]
+          updated_at: string
+          user_id: string | null
+          wedding_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wedding_memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       change_planning_task_status: {
         Args: {
@@ -3556,6 +3589,18 @@ export type Database = {
       guest_wedding_guide: {
         Args: { p_slug: string; p_token?: string }
         Returns: Json
+      }
+      issue_coordinator_invitation: {
+        Args: {
+          p_intended_role: Database["public"]["Enums"]["wedding_membership_role"]
+          p_invited_email?: string
+          p_wedding_id: string
+        }
+        Returns: {
+          invitation_expires_at: string
+          invitation_id: string
+          raw_token: string
+        }[]
       }
       issue_guest_pass: { Args: { p_guest_id: string }; Returns: Json }
       issue_household_website_token: {
