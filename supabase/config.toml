@@ -13,6 +13,9 @@ verify_jwt = false
 [functions.guest-pass-lookup]
 verify_jwt = true
 
+[functions.wedding-day-check-in]
+verify_jwt = true
+
 [api]
 enabled = true
 # Port to use for the API URL.

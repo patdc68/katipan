@@ -198,6 +198,13 @@ export type Database = {
             foreignKeyName: "attire_group_guest_targets_guest_same_wedding_fkey"
             columns: ["wedding_id", "guest_id"]
             isOneToOne: false
+            referencedRelation: "guest_check_in_state"
+            referencedColumns: ["wedding_id", "guest_id"]
+          },
+          {
+            foreignKeyName: "attire_group_guest_targets_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
             referencedRelation: "guests"
             referencedColumns: ["wedding_id", "id"]
           },
@@ -611,6 +618,13 @@ export type Database = {
             foreignKeyName: "entourage_assignments_guest_same_wedding_fkey"
             columns: ["wedding_id", "guest_id"]
             isOneToOne: false
+            referencedRelation: "guest_check_in_state"
+            referencedColumns: ["wedding_id", "guest_id"]
+          },
+          {
+            foreignKeyName: "entourage_assignments_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
             referencedRelation: "guests"
             referencedColumns: ["wedding_id", "id"]
           },
@@ -709,6 +723,13 @@ export type Database = {
             foreignKeyName: "guest_allowance_claims_guest_same_wedding_fkey"
             columns: ["wedding_id", "guest_id"]
             isOneToOne: false
+            referencedRelation: "guest_check_in_state"
+            referencedColumns: ["wedding_id", "guest_id"]
+          },
+          {
+            foreignKeyName: "guest_allowance_claims_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
             referencedRelation: "guests"
             referencedColumns: ["wedding_id", "id"]
           },
@@ -759,6 +780,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "guest_households"
             referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "guest_allowances_sponsor_same_wedding_fkey"
+            columns: ["wedding_id", "sponsor_guest_id"]
+            isOneToOne: false
+            referencedRelation: "guest_check_in_state"
+            referencedColumns: ["wedding_id", "guest_id"]
           },
           {
             foreignKeyName: "guest_allowances_sponsor_same_wedding_fkey"
@@ -867,6 +895,13 @@ export type Database = {
             foreignKeyName: "guest_attire_guidance_guest_same_wedding_fkey"
             columns: ["wedding_id", "guest_id"]
             isOneToOne: true
+            referencedRelation: "guest_check_in_state"
+            referencedColumns: ["wedding_id", "guest_id"]
+          },
+          {
+            foreignKeyName: "guest_attire_guidance_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: true
             referencedRelation: "guests"
             referencedColumns: ["wedding_id", "id"]
           },
@@ -913,6 +948,73 @@ export type Database = {
           },
         ]
       }
+      guest_check_in_events: {
+        Row: {
+          client_event_id: string
+          event_sequence: number
+          event_type: Database["public"]["Enums"]["guest_check_in_event_type"]
+          guest_id: string
+          id: string
+          occurred_at: string
+          recorded_at: string
+          recorded_by_user_id: string
+          reversal_reason: string | null
+          reverses_event_id: string | null
+          source: Database["public"]["Enums"]["guest_check_in_source"]
+          wedding_id: string
+        }
+        Insert: {
+          client_event_id: string
+          event_sequence?: never
+          event_type: Database["public"]["Enums"]["guest_check_in_event_type"]
+          guest_id: string
+          id?: string
+          occurred_at?: string
+          recorded_at?: string
+          recorded_by_user_id: string
+          reversal_reason?: string | null
+          reverses_event_id?: string | null
+          source: Database["public"]["Enums"]["guest_check_in_source"]
+          wedding_id: string
+        }
+        Update: {
+          client_event_id?: string
+          event_sequence?: never
+          event_type?: Database["public"]["Enums"]["guest_check_in_event_type"]
+          guest_id?: string
+          id?: string
+          occurred_at?: string
+          recorded_at?: string
+          recorded_by_user_id?: string
+          reversal_reason?: string | null
+          reverses_event_id?: string | null
+          source?: Database["public"]["Enums"]["guest_check_in_source"]
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_check_in_events_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
+            referencedRelation: "guest_check_in_state"
+            referencedColumns: ["wedding_id", "guest_id"]
+          },
+          {
+            foreignKeyName: "guest_check_in_events_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "guest_check_in_events_reversal_same_guest_fkey"
+            columns: ["wedding_id", "guest_id", "reverses_event_id"]
+            isOneToOne: false
+            referencedRelation: "guest_check_in_events"
+            referencedColumns: ["wedding_id", "guest_id", "id"]
+          },
+        ]
+      }
       guest_group_memberships: {
         Row: {
           created_at: string
@@ -939,6 +1041,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "guest_groups"
             referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "guest_group_memberships_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
+            referencedRelation: "guest_check_in_state"
+            referencedColumns: ["wedding_id", "guest_id"]
           },
           {
             foreignKeyName: "guest_group_memberships_guest_same_wedding_fkey"
@@ -1088,6 +1197,13 @@ export type Database = {
           wedding_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "guest_rsvps_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
+            referencedRelation: "guest_check_in_state"
+            referencedColumns: ["wedding_id", "guest_id"]
+          },
           {
             foreignKeyName: "guest_rsvps_guest_same_wedding_fkey"
             columns: ["wedding_id", "guest_id"]
@@ -1524,6 +1640,13 @@ export type Database = {
             foreignKeyName: "seating_assignments_guest_fkey"
             columns: ["wedding_id", "guest_id"]
             isOneToOne: false
+            referencedRelation: "guest_check_in_state"
+            referencedColumns: ["wedding_id", "guest_id"]
+          },
+          {
+            foreignKeyName: "seating_assignments_guest_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
             referencedRelation: "guests"
             referencedColumns: ["wedding_id", "id"]
           },
@@ -1924,6 +2047,122 @@ export type Database = {
           },
           {
             foreignKeyName: "task_categories_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wedding_day_item_memberships: {
+        Row: {
+          created_at: string
+          item_id: string
+          membership_id: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          item_id: string
+          membership_id: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          item_id?: string
+          membership_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_day_item_memberships_item_same_wedding_fkey"
+            columns: ["wedding_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_day_items"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "wedding_day_item_memberships_member_same_wedding_fkey"
+            columns: ["wedding_id", "membership_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_memberships"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      wedding_day_items: {
+        Row: {
+          actual_end: string | null
+          actual_start: string | null
+          created_at: string
+          created_by_user_id: string
+          description: string | null
+          id: string
+          place_id: string | null
+          scheduled_end: string | null
+          scheduled_start: string
+          sort_order: number
+          status: Database["public"]["Enums"]["wedding_day_item_status"]
+          title: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_start?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          description?: string | null
+          id?: string
+          place_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["wedding_day_item_status"]
+          title: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          actual_end?: string | null
+          actual_start?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          description?: string | null
+          id?: string
+          place_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["wedding_day_item_status"]
+          title?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_day_items_place_same_wedding_fkey"
+            columns: ["wedding_id", "place_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_places"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "wedding_day_items_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_day_items_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_day_items_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "weddings"
@@ -2580,6 +2819,38 @@ export type Database = {
       }
     }
     Views: {
+      guest_check_in_state: {
+        Row: {
+          guest_id: string | null
+          is_checked_in: boolean | null
+          last_recorded_at: string | null
+          latest_event_id: string | null
+          wedding_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guests_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "guests_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "guests_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guest_household_rsvp_progress: {
         Row: {
           attending_guests: number | null
@@ -3284,6 +3555,28 @@ export type Database = {
         }
         Returns: string
       }
+      wedding_day_check_in: {
+        Args: {
+          p_client_event_id?: string
+          p_guest_id?: string
+          p_household_id?: string
+          p_occurred_at?: string
+          p_qr_token?: string
+          p_wedding_id: string
+        }
+        Returns: Json
+      }
+      wedding_day_dashboard: { Args: { p_wedding_id: string }; Returns: Json }
+      wedding_day_reverse_check_in: {
+        Args: {
+          p_client_event_id?: string
+          p_guest_id: string
+          p_occurred_at?: string
+          p_reason?: string
+          p_wedding_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       attachment_status: "PENDING_UPLOAD" | "AVAILABLE" | "DELETED"
@@ -3303,6 +3596,8 @@ export type Database = {
         | "OTHER"
         | "UNDECIDED"
       guest_allowance_type: "PLUS_ONE" | "CHILD"
+      guest_check_in_event_type: "CHECK_IN" | "REVERSAL"
+      guest_check_in_source: "QR" | "MANUAL" | "OFFLINE_SYNC"
       guest_rsvp_status: "NO_RESPONSE" | "ATTENDING" | "DECLINED"
       household_invitation_delivery_status: "NOT_SENT" | "SENT"
       household_rsvp_progress:
@@ -3334,6 +3629,13 @@ export type Database = {
         | "FILIPINIANA"
         | "MODERN_LOVE"
         | "AFTER_DARK"
+      wedding_day_item_status:
+        | "UPCOMING"
+        | "IN_PROGRESS"
+        | "COMPLETED"
+        | "DELAYED"
+        | "SKIPPED"
+        | "CANCELLED"
       wedding_invitation_status: "PENDING" | "ACCEPTED" | "REVOKED"
       wedding_membership_role:
         | "OWNER"
@@ -3514,6 +3816,8 @@ export const Constants = {
         "UNDECIDED",
       ],
       guest_allowance_type: ["PLUS_ONE", "CHILD"],
+      guest_check_in_event_type: ["CHECK_IN", "REVERSAL"],
+      guest_check_in_source: ["QR", "MANUAL", "OFFLINE_SYNC"],
       guest_rsvp_status: ["NO_RESPONSE", "ATTENDING", "DECLINED"],
       household_invitation_delivery_status: ["NOT_SENT", "SENT"],
       household_rsvp_progress: [
@@ -3542,6 +3846,14 @@ export const Constants = {
         "FILIPINIANA",
         "MODERN_LOVE",
         "AFTER_DARK",
+      ],
+      wedding_day_item_status: [
+        "UPCOMING",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "DELAYED",
+        "SKIPPED",
+        "CANCELLED",
       ],
       wedding_invitation_status: ["PENDING", "ACCEPTED", "REVOKED"],
       wedding_membership_role: [
