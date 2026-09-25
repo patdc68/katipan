@@ -1481,6 +1481,217 @@ export type Database = {
         }
         Relationships: []
       }
+      seating_assignments: {
+        Row: {
+          created_at: string
+          event_id: string
+          guest_id: string
+          id: string
+          seat_id: string | null
+          table_id: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          guest_id: string
+          id?: string
+          seat_id?: string | null
+          table_id: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          guest_id?: string
+          id?: string
+          seat_id?: string | null
+          table_id?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seating_assignments_event_fkey"
+            columns: ["wedding_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "seating_events"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "seating_assignments_guest_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "seating_assignments_seat_fkey"
+            columns: ["wedding_id", "event_id", "table_id", "seat_id"]
+            isOneToOne: false
+            referencedRelation: "seating_seats"
+            referencedColumns: ["wedding_id", "event_id", "table_id", "id"]
+          },
+          {
+            foreignKeyName: "seating_assignments_table_fkey"
+            columns: ["wedding_id", "event_id", "table_id"]
+            isOneToOne: false
+            referencedRelation: "seating_tables"
+            referencedColumns: ["wedding_id", "event_id", "id"]
+          },
+        ]
+      }
+      seating_events: {
+        Row: {
+          created_at: string
+          event_kind: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          visibility: Database["public"]["Enums"]["seating_visibility"]
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_kind?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          visibility?: Database["public"]["Enums"]["seating_visibility"]
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          event_kind?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          visibility?: Database["public"]["Enums"]["seating_visibility"]
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seating_events_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "seating_events_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "seating_events_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seating_seats: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          label: string
+          sort_order: number
+          table_id: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          label: string
+          sort_order?: number
+          table_id: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          table_id?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seating_seats_table_fkey"
+            columns: ["wedding_id", "event_id", "table_id"]
+            isOneToOne: false
+            referencedRelation: "seating_tables"
+            referencedColumns: ["wedding_id", "event_id", "id"]
+          },
+        ]
+      }
+      seating_tables: {
+        Row: {
+          capacity: number
+          created_at: string
+          event_id: string
+          id: string
+          name: string
+          notes: string | null
+          shape: Database["public"]["Enums"]["seating_table_shape"]
+          sort_order: number
+          table_number: number | null
+          updated_at: string
+          wedding_id: string
+          zone: string | null
+        }
+        Insert: {
+          capacity: number
+          created_at?: string
+          event_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          shape?: Database["public"]["Enums"]["seating_table_shape"]
+          sort_order?: number
+          table_number?: number | null
+          updated_at?: string
+          wedding_id: string
+          zone?: string | null
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          event_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          shape?: Database["public"]["Enums"]["seating_table_shape"]
+          sort_order?: number
+          table_number?: number | null
+          updated_at?: string
+          wedding_id?: string
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seating_tables_event_fkey"
+            columns: ["wedding_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "seating_events"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
       supplier_contract_attachments: {
         Row: {
           attachment_id: string
@@ -2693,6 +2904,32 @@ export type Database = {
         }
         Returns: string
       }
+      create_seating_event: {
+        Args: {
+          p_event_kind?: string
+          p_name: string
+          p_sort_order?: number
+          p_wedding_id: string
+        }
+        Returns: string
+      }
+      create_seating_seat: {
+        Args: { p_label: string; p_sort_order?: number; p_table_id: string }
+        Returns: string
+      }
+      create_seating_table: {
+        Args: {
+          p_capacity: number
+          p_event_id: string
+          p_name: string
+          p_notes?: string
+          p_shape?: Database["public"]["Enums"]["seating_table_shape"]
+          p_sort_order?: number
+          p_table_number?: number
+          p_zone?: string
+        }
+        Returns: string
+      }
       create_supplier: {
         Args: {
           p_category: string
@@ -2720,6 +2957,8 @@ export type Database = {
         }
         Returns: string
       }
+      delete_seating_seat: { Args: { p_seat_id: string }; Returns: undefined }
+      delete_seating_table: { Args: { p_table_id: string }; Returns: undefined }
       guest_submit_rsvp: {
         Args: {
           p_dietary_notes?: string
@@ -2880,6 +3119,15 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      seat_guest: {
+        Args: {
+          p_event_id: string
+          p_guest_id: string
+          p_seat_id?: string
+          p_table_id: string
+        }
+        Returns: string
+      }
       set_guest_rsvp: {
         Args: {
           p_dietary_notes?: string
@@ -2894,6 +3142,13 @@ export type Database = {
           status: Database["public"]["Enums"]["guest_rsvp_status"]
           wedding_id: string
         }[]
+      }
+      set_seating_visibility: {
+        Args: {
+          p_event_id: string
+          p_visibility: Database["public"]["Enums"]["seating_visibility"]
+        }
+        Returns: undefined
       }
       set_wedding_place_purpose: {
         Args: {
@@ -2910,6 +3165,10 @@ export type Database = {
       unassign_planning_task: {
         Args: { p_membership_id: string; p_task_id: string }
         Returns: boolean
+      }
+      unseat_guest: {
+        Args: { p_event_id: string; p_guest_id: string }
+        Returns: undefined
       }
       update_budget_item: {
         Args: {
@@ -2950,6 +3209,32 @@ export type Database = {
           p_title: string
         }
         Returns: string
+      }
+      update_seating_event: {
+        Args: {
+          p_event_id: string
+          p_event_kind: string
+          p_name: string
+          p_sort_order: number
+        }
+        Returns: undefined
+      }
+      update_seating_seat: {
+        Args: { p_label: string; p_seat_id: string; p_sort_order: number }
+        Returns: undefined
+      }
+      update_seating_table: {
+        Args: {
+          p_capacity: number
+          p_name: string
+          p_notes: string
+          p_shape: Database["public"]["Enums"]["seating_table_shape"]
+          p_sort_order: number
+          p_table_id: string
+          p_table_number: number
+          p_zone: string
+        }
+        Returns: undefined
       }
       update_supplier: {
         Args: {
@@ -3018,6 +3303,8 @@ export type Database = {
         | "RESPONDED"
       planning_task_priority: "LOW" | "NORMAL" | "HIGH" | "URGENT"
       planning_task_status: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+      seating_table_shape: "ROUND" | "RECTANGULAR" | "SQUARE" | "OVAL" | "OTHER"
+      seating_visibility: "HIDDEN" | "TABLE_ONLY" | "TABLE_AND_SEAT"
       supplier_payment_status: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED"
       supplier_status:
         | "PROSPECT"
@@ -3228,6 +3515,8 @@ export const Constants = {
       ],
       planning_task_priority: ["LOW", "NORMAL", "HIGH", "URGENT"],
       planning_task_status: ["TODO", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
+      seating_table_shape: ["ROUND", "RECTANGULAR", "SQUARE", "OVAL", "OTHER"],
+      seating_visibility: ["HIDDEN", "TABLE_ONLY", "TABLE_AND_SEAT"],
       supplier_payment_status: ["PENDING", "PAID", "OVERDUE", "CANCELLED"],
       supplier_status: [
         "PROSPECT",
