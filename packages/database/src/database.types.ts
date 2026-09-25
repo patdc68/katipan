@@ -2928,10 +2928,15 @@ export type Database = {
       }
       weddings: {
         Row: {
+          archived_from_status:
+            | Database["public"]["Enums"]["wedding_status"]
+            | null
           ceremony_style: Database["public"]["Enums"]["ceremony_style"]
           created_at: string
           created_by_user_id: string | null
           currency_code: string
+          deletion_nonce: string | null
+          deletion_requested_at: string | null
           display_name: string | null
           estimated_guest_count: number | null
           general_location: string | null
@@ -2944,10 +2949,15 @@ export type Database = {
           wedding_date: string | null
         }
         Insert: {
+          archived_from_status?:
+            | Database["public"]["Enums"]["wedding_status"]
+            | null
           ceremony_style?: Database["public"]["Enums"]["ceremony_style"]
           created_at?: string
           created_by_user_id?: string | null
           currency_code?: string
+          deletion_nonce?: string | null
+          deletion_requested_at?: string | null
           display_name?: string | null
           estimated_guest_count?: number | null
           general_location?: string | null
@@ -2960,10 +2970,15 @@ export type Database = {
           wedding_date?: string | null
         }
         Update: {
+          archived_from_status?:
+            | Database["public"]["Enums"]["wedding_status"]
+            | null
           ceremony_style?: Database["public"]["Enums"]["ceremony_style"]
           created_at?: string
           created_by_user_id?: string | null
           currency_code?: string
+          deletion_nonce?: string | null
+          deletion_requested_at?: string | null
           display_name?: string | null
           estimated_guest_count?: number | null
           general_location?: string | null
@@ -3177,6 +3192,36 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      activate_wedding: {
+        Args: { p_wedding_id: string }
+        Returns: {
+          archived_from_status:
+            | Database["public"]["Enums"]["wedding_status"]
+            | null
+          ceremony_style: Database["public"]["Enums"]["ceremony_style"]
+          created_at: string
+          created_by_user_id: string | null
+          currency_code: string
+          deletion_nonce: string | null
+          deletion_requested_at: string | null
+          display_name: string | null
+          estimated_guest_count: number | null
+          general_location: string | null
+          id: string
+          origin: Database["public"]["Enums"]["wedding_origin"]
+          ownership_mode: Database["public"]["Enums"]["wedding_ownership_mode"]
+          status: Database["public"]["Enums"]["wedding_status"]
+          timezone: string | null
+          updated_at: string
+          wedding_date: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "weddings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       add_existing_person_as_guest: {
         Args: {
           p_household_id: string
@@ -3188,6 +3233,36 @@ export type Database = {
       add_planning_task_dependency: {
         Args: { p_depends_on_task_id: string; p_task_id: string }
         Returns: boolean
+      }
+      archive_wedding: {
+        Args: { p_wedding_id: string }
+        Returns: {
+          archived_from_status:
+            | Database["public"]["Enums"]["wedding_status"]
+            | null
+          ceremony_style: Database["public"]["Enums"]["ceremony_style"]
+          created_at: string
+          created_by_user_id: string | null
+          currency_code: string
+          deletion_nonce: string | null
+          deletion_requested_at: string | null
+          display_name: string | null
+          estimated_guest_count: number | null
+          general_location: string | null
+          id: string
+          origin: Database["public"]["Enums"]["wedding_origin"]
+          ownership_mode: Database["public"]["Enums"]["wedding_ownership_mode"]
+          status: Database["public"]["Enums"]["wedding_status"]
+          timezone: string | null
+          updated_at: string
+          wedding_date: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "weddings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       archive_wedding_place: { Args: { p_place_id: string }; Returns: string }
       assign_planning_task: {
@@ -3225,6 +3300,36 @@ export type Database = {
           recipient_user_id: string
           title: string
         }[]
+      }
+      complete_wedding: {
+        Args: { p_wedding_id: string }
+        Returns: {
+          archived_from_status:
+            | Database["public"]["Enums"]["wedding_status"]
+            | null
+          ceremony_style: Database["public"]["Enums"]["ceremony_style"]
+          created_at: string
+          created_by_user_id: string | null
+          currency_code: string
+          deletion_nonce: string | null
+          deletion_requested_at: string | null
+          display_name: string | null
+          estimated_guest_count: number | null
+          general_location: string | null
+          id: string
+          origin: Database["public"]["Enums"]["wedding_origin"]
+          ownership_mode: Database["public"]["Enums"]["wedding_ownership_mode"]
+          status: Database["public"]["Enums"]["wedding_status"]
+          timezone: string | null
+          updated_at: string
+          wedding_date: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "weddings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       confirm_attachment_uploaded: {
         Args: {
@@ -3414,6 +3519,10 @@ export type Database = {
         }
         Returns: string
       }
+      finalize_wedding_deletion: {
+        Args: { p_nonce: string; p_wedding_id: string }
+        Returns: boolean
+      }
       finish_notification_delivery: {
         Args: {
           p_claim_token: string
@@ -3482,6 +3591,12 @@ export type Database = {
         Args: { p_attachment_id: string; p_supplier_id: string }
         Returns: boolean
       }
+      list_wedding_deletion_objects: {
+        Args: { p_nonce: string; p_wedding_id: string }
+        Returns: {
+          object_path: string
+        }[]
+      }
       mark_attachment_deleted: {
         Args: { p_attachment_id: string }
         Returns: {
@@ -3541,6 +3656,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      prepare_self_account_deletion: { Args: never; Returns: boolean }
       promote_wedding_member_to_owner: {
         Args: { p_target_membership_id: string; p_wedding_id: string }
         Returns: {
@@ -3594,6 +3710,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      request_wedding_deletion: {
+        Args: { p_confirm_name: string; p_wedding_id: string }
+        Returns: string
+      }
       reserve_attachment: {
         Args: {
           p_content_type: string
@@ -3610,6 +3730,36 @@ export type Database = {
       reset_household_invitation_delivery: {
         Args: { p_household_id: string }
         Returns: undefined
+      }
+      restore_wedding: {
+        Args: { p_wedding_id: string }
+        Returns: {
+          archived_from_status:
+            | Database["public"]["Enums"]["wedding_status"]
+            | null
+          ceremony_style: Database["public"]["Enums"]["ceremony_style"]
+          created_at: string
+          created_by_user_id: string | null
+          currency_code: string
+          deletion_nonce: string | null
+          deletion_requested_at: string | null
+          display_name: string | null
+          estimated_guest_count: number | null
+          general_location: string | null
+          id: string
+          origin: Database["public"]["Enums"]["wedding_origin"]
+          ownership_mode: Database["public"]["Enums"]["wedding_ownership_mode"]
+          status: Database["public"]["Enums"]["wedding_status"]
+          timezone: string | null
+          updated_at: string
+          wedding_date: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "weddings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       revoke_guest_pass: { Args: { p_guest_id: string }; Returns: boolean }
       revoke_household_website_token: {
