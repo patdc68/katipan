@@ -2208,6 +2208,114 @@ export type Database = {
           },
         ]
       }
+      wedding_website_sections: {
+        Row: {
+          audience: Database["public"]["Enums"]["website_section_audience"]
+          content: string | null
+          created_at: string
+          enabled: boolean
+          id: string
+          section_key: string
+          section_type: Database["public"]["Enums"]["website_section_type"]
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          audience?: Database["public"]["Enums"]["website_section_audience"]
+          content?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          section_key: string
+          section_type: Database["public"]["Enums"]["website_section_type"]
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          audience?: Database["public"]["Enums"]["website_section_audience"]
+          content?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          section_key?: string
+          section_type?: Database["public"]["Enums"]["website_section_type"]
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_website_sections_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_websites"
+            referencedColumns: ["wedding_id"]
+          },
+        ]
+      }
+      wedding_websites: {
+        Row: {
+          access_mode: Database["public"]["Enums"]["website_access_mode"]
+          created_at: string
+          introduction: string | null
+          is_published: boolean
+          published_at: string | null
+          slug: string
+          template_key: Database["public"]["Enums"]["website_template"]
+          title: string | null
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          access_mode?: Database["public"]["Enums"]["website_access_mode"]
+          created_at?: string
+          introduction?: string | null
+          is_published?: boolean
+          published_at?: string | null
+          slug: string
+          template_key?: Database["public"]["Enums"]["website_template"]
+          title?: string | null
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          access_mode?: Database["public"]["Enums"]["website_access_mode"]
+          created_at?: string
+          introduction?: string | null
+          is_published?: boolean
+          published_at?: string | null
+          slug?: string
+          template_key?: Database["public"]["Enums"]["website_template"]
+          title?: string | null
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_websites_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_websites_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_websites_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       weddings: {
         Row: {
           ceremony_style: Database["public"]["Enums"]["ceremony_style"]
@@ -2612,6 +2720,26 @@ export type Database = {
         }
         Returns: string
       }
+      guest_submit_rsvp: {
+        Args: {
+          p_dietary_notes?: string
+          p_guest_id: string
+          p_meal_choice?: string
+          p_response_notes?: string
+          p_slug: string
+          p_status: Database["public"]["Enums"]["guest_rsvp_status"]
+          p_token: string
+        }
+        Returns: Json
+      }
+      guest_wedding_guide: {
+        Args: { p_slug: string; p_token?: string }
+        Returns: Json
+      }
+      issue_household_website_token: {
+        Args: { p_expires_at?: string; p_household_id: string }
+        Returns: string
+      }
       issue_partner_owner_invitation: {
         Args: {
           p_invited_email?: string
@@ -2678,6 +2806,27 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      publish_wedding_website: {
+        Args: { p_publish: boolean; p_wedding_id: string }
+        Returns: {
+          access_mode: Database["public"]["Enums"]["website_access_mode"]
+          created_at: string
+          introduction: string | null
+          is_published: boolean
+          published_at: string | null
+          slug: string
+          template_key: Database["public"]["Enums"]["website_template"]
+          title: string | null
+          updated_at: string
+          wedding_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wedding_websites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       release_guest_allowance_claim: {
         Args: { p_allowance_id: string; p_guest_id: string }
         Returns: undefined
@@ -2716,6 +2865,10 @@ export type Database = {
         }[]
       }
       reset_household_invitation_delivery: {
+        Args: { p_household_id: string }
+        Returns: undefined
+      }
+      revoke_household_website_token: {
         Args: { p_household_id: string }
         Returns: undefined
       }
@@ -2872,6 +3025,20 @@ export type Database = {
         | "BOOKED"
         | "COMPLETED"
         | "CANCELLED"
+      website_access_mode: "ANYONE_WITH_LINK" | "INVITED_GUESTS_ONLY"
+      website_section_audience: "PUBLIC" | "INVITED" | "PERSONALIZED" | "HIDDEN"
+      website_section_type:
+        | "INTRO"
+        | "PLACES"
+        | "DRESS_CODE"
+        | "RSVP"
+        | "CUSTOM"
+      website_template:
+        | "SAMPAGUITA"
+        | "LUNTIAN"
+        | "FILIPINIANA"
+        | "MODERN_LOVE"
+        | "AFTER_DARK"
       wedding_invitation_status: "PENDING" | "ACCEPTED" | "REVOKED"
       wedding_membership_role:
         | "OWNER"
@@ -3068,6 +3235,16 @@ export const Constants = {
         "BOOKED",
         "COMPLETED",
         "CANCELLED",
+      ],
+      website_access_mode: ["ANYONE_WITH_LINK", "INVITED_GUESTS_ONLY"],
+      website_section_audience: ["PUBLIC", "INVITED", "PERSONALIZED", "HIDDEN"],
+      website_section_type: ["INTRO", "PLACES", "DRESS_CODE", "RSVP", "CUSTOM"],
+      website_template: [
+        "SAMPAGUITA",
+        "LUNTIAN",
+        "FILIPINIANA",
+        "MODERN_LOVE",
+        "AFTER_DARK",
       ],
       wedding_invitation_status: ["PENDING", "ACCEPTED", "REVOKED"],
       wedding_membership_role: [

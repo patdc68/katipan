@@ -4,6 +4,12 @@
 # working directory name when running `supabase init`.
 project_id = "katipan"
 
+[functions.guest-wedding-guide]
+verify_jwt = false
+
+[functions.guest-rsvp]
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.

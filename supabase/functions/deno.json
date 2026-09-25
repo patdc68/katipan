@@ -1,10 +1,13 @@
 {
+  "imports": {
+    "@supabase/functions-js/edge-runtime.d.ts": "jsr:@supabase/functions-js@2.117.1/edge-runtime.d.ts"
+  },
   "compilerOptions": {
     "lib": ["deno.ns", "dom", "dom.iterable", "esnext"],
     "strict": true
   },
   "tasks": {
-    "check": "deno check google-places-search/index.ts google-place-details/index.ts tests/google_places.test.ts",
-    "test": "deno test tests/google_places.test.ts"
+    "check": "deno check google-places-search/index.ts google-place-details/index.ts guest-wedding-guide/index.ts guest-rsvp/index.ts tests/google_places.test.ts tests/guest_website.test.ts",
+    "test": "deno test tests/google_places.test.ts tests/guest_website.test.ts"
   }
 }
