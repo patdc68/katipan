@@ -90,6 +90,243 @@ export type Database = {
           },
         ]
       }
+      attire_group_avoid_colors: {
+        Row: {
+          attire_group_id: string
+          color_hex: string
+          created_at: string
+          id: string
+          name: string | null
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          attire_group_id: string
+          color_hex: string
+          created_at?: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          attire_group_id?: string
+          color_hex?: string
+          created_at?: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attire_group_avoid_colors_group_same_wedding_fkey"
+            columns: ["wedding_id", "attire_group_id"]
+            isOneToOne: false
+            referencedRelation: "attire_groups"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      attire_group_entourage_role_targets: {
+        Row: {
+          attire_group_id: string
+          created_at: string
+          entourage_role_id: string
+          wedding_id: string
+        }
+        Insert: {
+          attire_group_id: string
+          created_at?: string
+          entourage_role_id: string
+          wedding_id: string
+        }
+        Update: {
+          attire_group_id?: string
+          created_at?: string
+          entourage_role_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attire_group_entourage_role_targets_group_same_wedding_fkey"
+            columns: ["wedding_id", "attire_group_id"]
+            isOneToOne: false
+            referencedRelation: "attire_groups"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "attire_group_entourage_role_targets_role_same_wedding_fkey"
+            columns: ["wedding_id", "entourage_role_id"]
+            isOneToOne: false
+            referencedRelation: "entourage_roles"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      attire_group_guest_targets: {
+        Row: {
+          attire_group_id: string
+          created_at: string
+          guest_id: string
+          wedding_id: string
+        }
+        Insert: {
+          attire_group_id: string
+          created_at?: string
+          guest_id: string
+          wedding_id: string
+        }
+        Update: {
+          attire_group_id?: string
+          created_at?: string
+          guest_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attire_group_guest_targets_group_same_wedding_fkey"
+            columns: ["wedding_id", "attire_group_id"]
+            isOneToOne: false
+            referencedRelation: "attire_groups"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "attire_group_guest_targets_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      attire_group_inspiration_attachments: {
+        Row: {
+          attachment_id: string
+          attire_group_id: string
+          created_at: string
+          sort_order: number
+          wedding_id: string
+        }
+        Insert: {
+          attachment_id: string
+          attire_group_id: string
+          created_at?: string
+          sort_order?: number
+          wedding_id: string
+        }
+        Update: {
+          attachment_id?: string
+          attire_group_id?: string
+          created_at?: string
+          sort_order?: number
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attire_group_inspiration_attachments_attachment_same_wedding_fk"
+            columns: ["wedding_id", "attachment_id"]
+            isOneToOne: false
+            referencedRelation: "attachments"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "attire_group_inspiration_attachments_group_same_wedding_fkey"
+            columns: ["wedding_id", "attire_group_id"]
+            isOneToOne: false
+            referencedRelation: "attire_groups"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      attire_group_recommended_colors: {
+        Row: {
+          attire_group_id: string
+          color_hex: string
+          created_at: string
+          id: string
+          name: string | null
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          attire_group_id: string
+          color_hex: string
+          created_at?: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          attire_group_id?: string
+          color_hex?: string
+          created_at?: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attire_group_recommended_colors_group_same_wedding_fkey"
+            columns: ["wedding_id", "attire_group_id"]
+            isOneToOne: false
+            referencedRelation: "attire_groups"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      attire_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          dress_code_id: string
+          id: string
+          instructions: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          dress_code_id: string
+          id?: string
+          instructions?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          dress_code_id?: string
+          id?: string
+          instructions?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attire_groups_dress_code_same_wedding_fkey"
+            columns: ["wedding_id", "dress_code_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_dress_codes"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
       budget_categories: {
         Row: {
           archived_at: string | null
@@ -223,6 +460,127 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      dress_code_avoid_colors: {
+        Row: {
+          color_hex: string
+          created_at: string
+          dress_code_id: string
+          id: string
+          name: string | null
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          color_hex: string
+          created_at?: string
+          dress_code_id: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          color_hex?: string
+          created_at?: string
+          dress_code_id?: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dress_code_avoid_colors_code_same_wedding_fkey"
+            columns: ["wedding_id", "dress_code_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_dress_codes"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      dress_code_inspiration_attachments: {
+        Row: {
+          attachment_id: string
+          created_at: string
+          dress_code_id: string
+          sort_order: number
+          wedding_id: string
+        }
+        Insert: {
+          attachment_id: string
+          created_at?: string
+          dress_code_id: string
+          sort_order?: number
+          wedding_id: string
+        }
+        Update: {
+          attachment_id?: string
+          created_at?: string
+          dress_code_id?: string
+          sort_order?: number
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dress_code_inspiration_attachments_attachment_same_wedding_fkey"
+            columns: ["wedding_id", "attachment_id"]
+            isOneToOne: false
+            referencedRelation: "attachments"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "dress_code_inspiration_attachments_code_same_wedding_fkey"
+            columns: ["wedding_id", "dress_code_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_dress_codes"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      dress_code_recommended_colors: {
+        Row: {
+          color_hex: string
+          created_at: string
+          dress_code_id: string
+          id: string
+          name: string | null
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          color_hex: string
+          created_at?: string
+          dress_code_id: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          color_hex?: string
+          created_at?: string
+          dress_code_id?: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dress_code_recommended_colors_code_same_wedding_fkey"
+            columns: ["wedding_id", "dress_code_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_dress_codes"
+            referencedColumns: ["wedding_id", "id"]
           },
         ]
       }
@@ -429,6 +787,129 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      guest_attire_avoid_colors: {
+        Row: {
+          color_hex: string
+          created_at: string
+          guest_attire_guidance_id: string
+          id: string
+          name: string | null
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          color_hex: string
+          created_at?: string
+          guest_attire_guidance_id: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          color_hex?: string
+          created_at?: string
+          guest_attire_guidance_id?: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_attire_avoid_colors_guidance_same_wedding_fkey"
+            columns: ["wedding_id", "guest_attire_guidance_id"]
+            isOneToOne: false
+            referencedRelation: "guest_attire_guidance"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      guest_attire_guidance: {
+        Row: {
+          created_at: string
+          guest_id: string
+          id: string
+          instructions: string
+          notes: string | null
+          title: string | null
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          guest_id: string
+          id?: string
+          instructions: string
+          notes?: string | null
+          title?: string | null
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          guest_id?: string
+          id?: string
+          instructions?: string
+          notes?: string | null
+          title?: string | null
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_attire_guidance_guest_same_wedding_fkey"
+            columns: ["wedding_id", "guest_id"]
+            isOneToOne: true
+            referencedRelation: "guests"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      guest_attire_recommended_colors: {
+        Row: {
+          color_hex: string
+          created_at: string
+          guest_attire_guidance_id: string
+          id: string
+          name: string | null
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          color_hex: string
+          created_at?: string
+          guest_attire_guidance_id: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          color_hex?: string
+          created_at?: string
+          guest_attire_guidance_id?: string
+          id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_attire_recommended_colors_guidance_same_wedding_fkey"
+            columns: ["wedding_id", "guest_attire_guidance_id"]
+            isOneToOne: false
+            referencedRelation: "guest_attire_guidance"
+            referencedColumns: ["wedding_id", "id"]
           },
         ]
       }
@@ -692,6 +1173,86 @@ export type Database = {
           },
         ]
       }
+      motif_colors: {
+        Row: {
+          color_hex: string
+          created_at: string
+          id: string
+          motif_id: string
+          name: string | null
+          sort_order: number
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          color_hex: string
+          created_at?: string
+          id?: string
+          motif_id: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          color_hex?: string
+          created_at?: string
+          id?: string
+          motif_id?: string
+          name?: string | null
+          sort_order?: number
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "motif_colors_motif_same_wedding_fkey"
+            columns: ["wedding_id", "motif_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_motifs"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
+      motif_inspiration_attachments: {
+        Row: {
+          attachment_id: string
+          created_at: string
+          motif_id: string
+          sort_order: number
+          wedding_id: string
+        }
+        Insert: {
+          attachment_id: string
+          created_at?: string
+          motif_id: string
+          sort_order?: number
+          wedding_id: string
+        }
+        Update: {
+          attachment_id?: string
+          created_at?: string
+          motif_id?: string
+          sort_order?: number
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "motif_inspiration_attachments_attachment_same_wedding_fkey"
+            columns: ["wedding_id", "attachment_id"]
+            isOneToOne: false
+            referencedRelation: "attachments"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "motif_inspiration_attachments_motif_same_wedding_fkey"
+            columns: ["wedding_id", "motif_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_motifs"
+            referencedColumns: ["wedding_id", "id"]
+          },
+        ]
+      }
       payment_receipt_attachments: {
         Row: {
           attachment_id: string
@@ -946,6 +1507,61 @@ export type Database = {
           },
         ]
       }
+      wedding_dress_codes: {
+        Row: {
+          created_at: string
+          description: string | null
+          general_notes: string | null
+          id: string
+          title: string
+          updated_at: string
+          venue_advice: string | null
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          general_notes?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          venue_advice?: string | null
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          general_notes?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+          venue_advice?: string | null
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_dress_codes_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_dress_codes_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_dress_codes_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wedding_invitations: {
         Row: {
           accepted_at: string | null
@@ -1076,6 +1692,58 @@ export type Database = {
             foreignKeyName: "wedding_memberships_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wedding_motifs: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          notes: string | null
+          title: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          title: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          title?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_motifs_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_motifs_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "wedding_motifs_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
