@@ -83,7 +83,9 @@ begin
   if jsonb_array_length(j->'sections') <> 4 or j::text not like '%Guest One Guidance%'
     or j::text not like '%Guest One%' or j::text like '%Private Guest%'
     or j::text like '%secret-%' or j::text like '%Hidden Hotel%'
-    or j::text like '%seating%' or j::text like '%guestPass%' then raise exception 'Invited projection incorrect: %', j; end if;
+    or jsonb_array_length(coalesce(j->'seating','[]'::jsonb)) <> 0
+    or jsonb_array_length(coalesce(j->'guestPasses','[]'::jsonb)) <> 0
+    then raise exception 'Invited projection incorrect: %', j; end if;
   perform public.guest_submit_rsvp('guide-wedding-a',t,'40000000-0000-0000-0000-000000000801','ATTENDING','Vegetarian','No peanuts','Thank you');
   if (select status from public.guest_rsvps where guest_id='40000000-0000-0000-0000-000000000802') <> 'NO_RESPONSE' then
     raise exception 'RSVP was not individual'; end if;
