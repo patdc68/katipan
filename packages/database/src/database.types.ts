@@ -397,6 +397,7 @@ export type Database = {
           description: string | null
           estimated_amount: number
           id: string
+          legacy_supplier_actual_amount: number | null
           name: string
           notes: string | null
           status: Database["public"]["Enums"]["budget_item_status"]
@@ -411,6 +412,7 @@ export type Database = {
           description?: string | null
           estimated_amount?: number
           id?: string
+          legacy_supplier_actual_amount?: number | null
           name: string
           notes?: string | null
           status?: Database["public"]["Enums"]["budget_item_status"]
@@ -425,6 +427,7 @@ export type Database = {
           description?: string | null
           estimated_amount?: number
           id?: string
+          legacy_supplier_actual_amount?: number | null
           name?: string
           notes?: string | null
           status?: Database["public"]["Enums"]["budget_item_status"]
@@ -439,6 +442,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "budget_categories"
             referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "budget_items_supplier_same_wedding_fkey"
+            columns: ["wedding_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_finance_totals"
+            referencedColumns: ["wedding_id", "supplier_id"]
           },
           {
             foreignKeyName: "budget_items_supplier_same_wedding_fkey"
@@ -1461,14 +1471,7 @@ export type Database = {
             foreignKeyName: "payment_receipt_attachments_payment_same_wedding_fkey"
             columns: ["wedding_id", "payment_id"]
             isOneToOne: false
-            referencedRelation: "supplier_payment_schedule"
-            referencedColumns: ["wedding_id", "id"]
-          },
-          {
-            foreignKeyName: "payment_receipt_attachments_payment_same_wedding_fkey"
-            columns: ["wedding_id", "payment_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_payments"
+            referencedRelation: "supplier_payment_transactions"
             referencedColumns: ["wedding_id", "id"]
           },
         ]
@@ -1907,12 +1910,19 @@ export type Database = {
             foreignKeyName: "supplier_contract_attachments_supplier_same_wedding_fkey"
             columns: ["wedding_id", "supplier_id"]
             isOneToOne: false
+            referencedRelation: "supplier_finance_totals"
+            referencedColumns: ["wedding_id", "supplier_id"]
+          },
+          {
+            foreignKeyName: "supplier_contract_attachments_supplier_same_wedding_fkey"
+            columns: ["wedding_id", "supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["wedding_id", "id"]
           },
         ]
       }
-      supplier_payments: {
+      supplier_installments: {
         Row: {
           amount: number
           budget_item_id: string | null
@@ -1921,10 +1931,6 @@ export type Database = {
           due_date: string
           id: string
           notes: string | null
-          paid_at: string | null
-          payment_method: string | null
-          reference_number: string | null
-          status: Database["public"]["Enums"]["supplier_payment_status"]
           supplier_id: string
           updated_at: string
           wedding_id: string
@@ -1937,10 +1943,6 @@ export type Database = {
           due_date: string
           id?: string
           notes?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          reference_number?: string | null
-          status?: Database["public"]["Enums"]["supplier_payment_status"]
           supplier_id: string
           updated_at?: string
           wedding_id: string
@@ -1953,45 +1955,169 @@ export type Database = {
           due_date?: string
           id?: string
           notes?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          reference_number?: string | null
-          status?: Database["public"]["Enums"]["supplier_payment_status"]
           supplier_id?: string
           updated_at?: string
           wedding_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "supplier_payments_budget_item_same_supplier_fkey"
+            foreignKeyName: "supplier_installments_budget_item_same_supplier_fkey"
             columns: ["wedding_id", "budget_item_id", "supplier_id"]
             isOneToOne: false
             referencedRelation: "budget_items"
             referencedColumns: ["wedding_id", "id", "supplier_id"]
           },
           {
-            foreignKeyName: "supplier_payments_supplier_same_wedding_fkey"
+            foreignKeyName: "supplier_installments_supplier_same_wedding_fkey"
+            columns: ["wedding_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_finance_totals"
+            referencedColumns: ["wedding_id", "supplier_id"]
+          },
+          {
+            foreignKeyName: "supplier_installments_supplier_same_wedding_fkey"
             columns: ["wedding_id", "supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["wedding_id", "id"]
           },
           {
-            foreignKeyName: "supplier_payments_wedding_id_fkey"
+            foreignKeyName: "supplier_installments_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "wedding_budget_totals"
             referencedColumns: ["wedding_id"]
           },
           {
-            foreignKeyName: "supplier_payments_wedding_id_fkey"
+            foreignKeyName: "supplier_installments_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "wedding_payment_totals"
             referencedColumns: ["wedding_id"]
           },
           {
-            foreignKeyName: "supplier_payments_wedding_id_fkey"
+            foreignKeyName: "supplier_installments_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_payment_transactions: {
+        Row: {
+          amount: number
+          budget_item_id: string | null
+          created_at: string
+          id: string
+          installment_id: string | null
+          kind: string
+          notes: string | null
+          paid_at: string
+          payment_method: string | null
+          recorded_by_user_id: string | null
+          reference_number: string | null
+          reverses_transaction_id: string | null
+          source: string
+          supplier_id: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          amount: number
+          budget_item_id?: string | null
+          created_at?: string
+          id?: string
+          installment_id?: string | null
+          kind?: string
+          notes?: string | null
+          paid_at: string
+          payment_method?: string | null
+          recorded_by_user_id?: string | null
+          reference_number?: string | null
+          reverses_transaction_id?: string | null
+          source?: string
+          supplier_id: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          amount?: number
+          budget_item_id?: string | null
+          created_at?: string
+          id?: string
+          installment_id?: string | null
+          kind?: string
+          notes?: string | null
+          paid_at?: string
+          payment_method?: string | null
+          recorded_by_user_id?: string | null
+          reference_number?: string | null
+          reverses_transaction_id?: string | null
+          source?: string
+          supplier_id?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payment_transactions_budget_item_same_supplier_fkey"
+            columns: ["wedding_id", "budget_item_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "budget_items"
+            referencedColumns: ["wedding_id", "id", "supplier_id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_transactions_installment_same_supplier_fkey"
+            columns: ["wedding_id", "supplier_id", "installment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_installment_schedule"
+            referencedColumns: ["wedding_id", "supplier_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_transactions_installment_same_supplier_fkey"
+            columns: ["wedding_id", "supplier_id", "installment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_installments"
+            referencedColumns: ["wedding_id", "supplier_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_transactions_reversal_fkey"
+            columns: ["wedding_id", "supplier_id", "reverses_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payment_transactions"
+            referencedColumns: ["wedding_id", "supplier_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_transactions_supplier_same_wedding_fkey"
+            columns: ["wedding_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_finance_totals"
+            referencedColumns: ["wedding_id", "supplier_id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_transactions_supplier_same_wedding_fkey"
+            columns: ["wedding_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_transactions_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_transactions_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_transactions_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "weddings"
@@ -2002,6 +2128,9 @@ export type Database = {
       suppliers: {
         Row: {
           category: string
+          commitment_notes: string | null
+          committed_amount: number | null
+          committed_on: string | null
           contact_name: string | null
           created_at: string
           email: string | null
@@ -2016,6 +2145,9 @@ export type Database = {
         }
         Insert: {
           category: string
+          commitment_notes?: string | null
+          committed_amount?: number | null
+          committed_on?: string | null
           contact_name?: string | null
           created_at?: string
           email?: string | null
@@ -2030,6 +2162,9 @@ export type Database = {
         }
         Update: {
           category?: string
+          commitment_notes?: string | null
+          committed_amount?: number | null
+          committed_on?: string | null
           contact_name?: string | null
           created_at?: string
           email?: string | null
@@ -3062,7 +3197,42 @@ export type Database = {
           },
         ]
       }
-      supplier_payment_schedule: {
+      supplier_finance_totals: {
+        Row: {
+          actual_paid: number | null
+          committed_amount: number | null
+          overdue_balance: number | null
+          remaining_commitment: number | null
+          scheduled_amount: number | null
+          supplier_id: string | null
+          unscheduled_paid: number | null
+          wedding_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "suppliers_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "suppliers_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_installment_schedule: {
         Row: {
           amount: number | null
           budget_item_id: string | null
@@ -3071,86 +3241,51 @@ export type Database = {
           due_date: string | null
           id: string | null
           notes: string | null
-          paid_at: string | null
-          payment_method: string | null
-          reference_number: string | null
-          status: Database["public"]["Enums"]["supplier_payment_status"] | null
-          stored_status:
-            | Database["public"]["Enums"]["supplier_payment_status"]
-            | null
+          paid_amount: number | null
+          status: string | null
           supplier_id: string | null
+          unpaid_balance: number | null
           updated_at: string | null
           wedding_id: string | null
         }
-        Insert: {
-          amount?: number | null
-          budget_item_id?: string | null
-          cancelled_at?: string | null
-          created_at?: string | null
-          due_date?: string | null
-          id?: string | null
-          notes?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          reference_number?: string | null
-          status?: never
-          stored_status?:
-            | Database["public"]["Enums"]["supplier_payment_status"]
-            | null
-          supplier_id?: string | null
-          updated_at?: string | null
-          wedding_id?: string | null
-        }
-        Update: {
-          amount?: number | null
-          budget_item_id?: string | null
-          cancelled_at?: string | null
-          created_at?: string | null
-          due_date?: string | null
-          id?: string | null
-          notes?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          reference_number?: string | null
-          status?: never
-          stored_status?:
-            | Database["public"]["Enums"]["supplier_payment_status"]
-            | null
-          supplier_id?: string | null
-          updated_at?: string | null
-          wedding_id?: string | null
-        }
         Relationships: [
           {
-            foreignKeyName: "supplier_payments_budget_item_same_supplier_fkey"
+            foreignKeyName: "supplier_installments_budget_item_same_supplier_fkey"
             columns: ["wedding_id", "budget_item_id", "supplier_id"]
             isOneToOne: false
             referencedRelation: "budget_items"
             referencedColumns: ["wedding_id", "id", "supplier_id"]
           },
           {
-            foreignKeyName: "supplier_payments_supplier_same_wedding_fkey"
+            foreignKeyName: "supplier_installments_supplier_same_wedding_fkey"
+            columns: ["wedding_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_finance_totals"
+            referencedColumns: ["wedding_id", "supplier_id"]
+          },
+          {
+            foreignKeyName: "supplier_installments_supplier_same_wedding_fkey"
             columns: ["wedding_id", "supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["wedding_id", "id"]
           },
           {
-            foreignKeyName: "supplier_payments_wedding_id_fkey"
+            foreignKeyName: "supplier_installments_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "wedding_budget_totals"
             referencedColumns: ["wedding_id"]
           },
           {
-            foreignKeyName: "supplier_payments_wedding_id_fkey"
+            foreignKeyName: "supplier_installments_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "wedding_payment_totals"
             referencedColumns: ["wedding_id"]
           },
           {
-            foreignKeyName: "supplier_payments_wedding_id_fkey"
+            foreignKeyName: "supplier_installments_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "weddings"
@@ -3164,17 +3299,23 @@ export type Database = {
           actual_total: number | null
           currency_code: string | null
           estimated_total: number | null
+          manual_actual_total: number | null
+          supplier_actual_total: number | null
           wedding_id: string | null
         }
         Relationships: []
       }
       wedding_payment_totals: {
         Row: {
+          committed_total: number | null
           currency_code: string | null
           overdue_total: number | null
           paid_total: number | null
           pending_total: number | null
+          remaining_commitment: number | null
           scheduled_total: number | null
+          uncommitted_supplier_count: number | null
+          unscheduled_paid_total: number | null
           wedding_id: string | null
         }
         Relationships: []
@@ -3277,10 +3418,6 @@ export type Database = {
       assign_planning_task: {
         Args: { p_membership_id: string; p_task_id: string }
         Returns: boolean
-      }
-      cancel_supplier_payment: {
-        Args: { p_payment_id: string }
-        Returns: string
       }
       change_coordinator_role: {
         Args: {
@@ -3525,14 +3662,12 @@ export type Database = {
         }
         Returns: string
       }
-      create_supplier_payment: {
+      create_supplier_installment: {
         Args: {
           p_amount: number
           p_budget_item_id: string
           p_due_date: string
           p_notes?: string
-          p_payment_method?: string
-          p_reference_number?: string
           p_supplier_id: string
           p_wedding_id: string
         }
@@ -3662,19 +3797,6 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: boolean
       }
-      mark_supplier_payment_paid: {
-        Args: {
-          p_paid_at?: string
-          p_payment_id: string
-          p_payment_method?: string
-          p_reference_number?: string
-        }
-        Returns: string
-      }
-      mark_supplier_payment_unpaid: {
-        Args: { p_payment_id: string }
-        Returns: Database["public"]["Enums"]["supplier_payment_status"]
-      }
       mark_wedding_notifications_read: {
         Args: { p_wedding_id: string }
         Returns: number
@@ -3730,6 +3852,20 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_supplier_payment: {
+        Args: {
+          p_amount: number
+          p_budget_item_id: string
+          p_installment_id: string
+          p_notes?: string
+          p_paid_at: string
+          p_payment_method?: string
+          p_reference_number?: string
+          p_supplier_id: string
+          p_wedding_id: string
+        }
+        Returns: string
       }
       release_guest_allowance_claim: {
         Args: { p_allowance_id: string; p_guest_id: string }
@@ -3806,6 +3942,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      reverse_supplier_payment: {
+        Args: { p_payment_id: string; p_reason: string }
+        Returns: string
+      }
       revoke_guest_pass: { Args: { p_guest_id: string }; Returns: boolean }
       revoke_household_website_token: {
         Args: { p_household_id: string }
@@ -3850,6 +3990,15 @@ export type Database = {
           p_visibility: Database["public"]["Enums"]["seating_visibility"]
         }
         Returns: undefined
+      }
+      set_supplier_commitment: {
+        Args: {
+          p_amount: number
+          p_committed_on?: string
+          p_notes?: string
+          p_supplier_id: string
+        }
+        Returns: string
       }
       set_wedding_notification_category: {
         Args: {
@@ -4000,18 +4149,6 @@ export type Database = {
           p_status: Database["public"]["Enums"]["supplier_status"]
           p_supplier_id: string
           p_website: string
-        }
-        Returns: string
-      }
-      update_supplier_payment: {
-        Args: {
-          p_amount: number
-          p_budget_item_id: string
-          p_due_date: string
-          p_notes: string
-          p_payment_id: string
-          p_payment_method: string
-          p_reference_number: string
         }
         Returns: string
       }
