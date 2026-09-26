@@ -10,6 +10,9 @@ verify_jwt = false
 [functions.guest-rsvp]
 verify_jwt = false
 
+[functions.guest-media]
+verify_jwt = false
+
 [functions.guest-pass-lookup]
 verify_jwt = true
 

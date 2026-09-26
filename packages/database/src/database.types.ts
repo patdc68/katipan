@@ -1172,6 +1172,105 @@ export type Database = {
           },
         ]
       }
+      guest_program_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_published: boolean
+          operational_item_id: string | null
+          place_id: string | null
+          published_at: string | null
+          review_confirmed_at: string | null
+          review_confirmed_by_user_id: string | null
+          review_requested_at: string | null
+          review_required: boolean
+          review_resolution: string | null
+          scheduled_end: string | null
+          scheduled_start: string
+          sort_order: number
+          title: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          operational_item_id?: string | null
+          place_id?: string | null
+          published_at?: string | null
+          review_confirmed_at?: string | null
+          review_confirmed_by_user_id?: string | null
+          review_requested_at?: string | null
+          review_required?: boolean
+          review_resolution?: string | null
+          scheduled_end?: string | null
+          scheduled_start: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          operational_item_id?: string | null
+          place_id?: string | null
+          published_at?: string | null
+          review_confirmed_at?: string | null
+          review_confirmed_by_user_id?: string | null
+          review_requested_at?: string | null
+          review_required?: boolean
+          review_resolution?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_program_items_operational_same_wedding_fkey"
+            columns: ["wedding_id", "operational_item_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_day_items"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "guest_program_items_place_same_wedding_fkey"
+            columns: ["wedding_id", "place_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_places"
+            referencedColumns: ["wedding_id", "id"]
+          },
+          {
+            foreignKeyName: "guest_program_items_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_budget_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "guest_program_items_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_payment_totals"
+            referencedColumns: ["wedding_id"]
+          },
+          {
+            foreignKeyName: "guest_program_items_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guest_rsvps: {
         Row: {
           created_at: string
@@ -3705,6 +3804,10 @@ export type Database = {
         Args: { p_wedding_id: string }
         Returns: Json
       }
+      guest_media_locator: {
+        Args: { p_attachment_id: string; p_slug: string; p_token: string }
+        Returns: Json
+      }
       guest_pass_lookup: {
         Args: { p_token: string; p_wedding_id: string }
         Returns: Json
@@ -3968,6 +4071,41 @@ export type Database = {
           p_table_id: string
         }
         Returns: string
+      }
+      set_guest_program_publication: {
+        Args: {
+          p_action: string
+          p_item_id: string
+          p_publish?: boolean
+          p_scheduled_end?: string
+          p_scheduled_start?: string
+        }
+        Returns: {
+          created_at: string
+          description: string | null
+          id: string
+          is_published: boolean
+          operational_item_id: string | null
+          place_id: string | null
+          published_at: string | null
+          review_confirmed_at: string | null
+          review_confirmed_by_user_id: string | null
+          review_requested_at: string | null
+          review_required: boolean
+          review_resolution: string | null
+          scheduled_end: string | null
+          scheduled_start: string
+          sort_order: number
+          title: string
+          updated_at: string
+          wedding_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "guest_program_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_guest_rsvp: {
         Args: {
