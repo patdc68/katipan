@@ -213,16 +213,16 @@ set local role service_role;
 select * from public.claim_notification_deliveries(10);
 set local role postgres;
 do $$ begin
-  if (select count(*) from private.notification_delivery_outbox where status = 'SKIPPED') <> 4
+  if (select count(*) from private.notification_delivery_outbox where status = 'SKIPPED') <> 6
     or (select count(*) from public.notifications
-      where recipient_user_id = '00000000-0000-0000-0000-000000009201') <> 2 then
+      where recipient_user_id = '00000000-0000-0000-0000-000000009201') <> 3 then
     raise exception 'Removal did not stop delivery while preserving history';
   end if;
 end $$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000009201',true);
 do $$ begin
-  if (select count(*) from public.notifications) <> 2 then
+  if (select count(*) from public.notifications) <> 3 then
     raise exception 'Historical notification vanished after membership removal';
   end if;
 end $$;

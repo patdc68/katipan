@@ -19,6 +19,9 @@ verify_jwt = true
 [functions.wedding-day-check-in]
 verify_jwt = true
 
+[functions.notification-worker]
+verify_jwt = true
+
 [api]
 enabled = true
 # Port to use for the API URL.

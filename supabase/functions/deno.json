@@ -7,7 +7,7 @@
     "strict": true
   },
   "tasks": {
-    "check": "deno check google-places-search/index.ts google-place-details/index.ts guest-wedding-guide/index.ts guest-rsvp/index.ts guest-media/index.ts guest-pass-lookup/index.ts wedding-day-check-in/index.ts delete-wedding/index.ts delete-account/index.ts tests/google_places.test.ts tests/guest_website.test.ts tests/guest_media.test.ts tests/guest_pass_lookup.test.ts tests/wedding_day_check_in.test.ts tests/wedding_lifecycle.test.ts",
-    "test": "deno test tests/google_places.test.ts tests/guest_website.test.ts tests/guest_media.test.ts tests/guest_pass_lookup.test.ts tests/wedding_day_check_in.test.ts tests/wedding_lifecycle.test.ts"
+    "check": "deno check google-places-search/index.ts google-place-details/index.ts guest-wedding-guide/index.ts guest-rsvp/index.ts guest-media/index.ts guest-pass-lookup/index.ts wedding-day-check-in/index.ts delete-wedding/index.ts delete-account/index.ts notification-worker/index.ts tests/google_places.test.ts tests/guest_website.test.ts tests/guest_media.test.ts tests/guest_pass_lookup.test.ts tests/wedding_day_check_in.test.ts tests/wedding_lifecycle.test.ts tests/notification_worker.test.ts",
+    "test": "deno test tests/google_places.test.ts tests/guest_website.test.ts tests/guest_media.test.ts tests/guest_pass_lookup.test.ts tests/wedding_day_check_in.test.ts tests/wedding_lifecycle.test.ts tests/notification_worker.test.ts"
   }
 }

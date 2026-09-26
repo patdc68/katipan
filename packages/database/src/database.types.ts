@@ -1478,6 +1478,42 @@ export type Database = {
           },
         ]
       }
+      notification_devices: {
+        Row: {
+          created_at: string
+          device_id: string
+          enabled: boolean
+          expo_push_token: string
+          id: string
+          platform: string
+          revoked_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          enabled?: boolean
+          expo_push_token: string
+          id?: string
+          platform: string
+          revoked_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          enabled?: boolean
+          expo_push_token?: string
+          id?: string
+          platform?: string
+          revoked_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string
@@ -3772,6 +3808,14 @@ export type Database = {
         }
         Returns: string
       }
+      defer_notification_delivery: {
+        Args: {
+          p_claim_token: string
+          p_next_attempt_at: string
+          p_outbox_id: string
+        }
+        Returns: boolean
+      }
       delete_seating_seat: { Args: { p_seat_id: string }; Returns: undefined }
       delete_seating_table: { Args: { p_table_id: string }; Returns: undefined }
       enqueue_notification: {
@@ -3796,6 +3840,25 @@ export type Database = {
           p_error_code?: string
           p_outbox_id: string
           p_sent: boolean
+        }
+        Returns: boolean
+      }
+      finish_notification_push_delivery: {
+        Args: {
+          p_claim_token: string
+          p_device_id: string
+          p_outbox_id: string
+          p_status: string
+          p_ticket_id?: string
+        }
+        Returns: boolean
+      }
+      finish_notification_push_receipt: {
+        Args: {
+          p_device_id: string
+          p_outbox_id: string
+          p_registered: boolean
+          p_ticket_id: string
         }
         Returns: boolean
       }
@@ -3926,7 +3989,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      notification_delivery_destinations: {
+        Args: { p_claim_token: string; p_outbox_id: string }
+        Returns: Json
+      }
+      pending_notification_push_receipts: {
+        Args: { p_limit?: number }
+        Returns: {
+          device_id: string
+          outbox_id: string
+          ticket_id: string
+        }[]
+      }
       prepare_self_account_deletion: { Args: never; Returns: boolean }
+      produce_payment_due_notifications: {
+        Args: { p_as_of?: string }
+        Returns: number
+      }
       promote_wedding_member_to_owner: {
         Args: { p_target_membership_id: string; p_wedding_id: string }
         Returns: {
@@ -4010,6 +4089,14 @@ export type Database = {
           bucket_id: string
           object_path: string
         }[]
+      }
+      reserve_notification_push_delivery: {
+        Args: {
+          p_claim_token: string
+          p_device_id: string
+          p_outbox_id: string
+        }
+        Returns: boolean
       }
       reset_household_invitation_delivery: {
         Args: { p_household_id: string }
