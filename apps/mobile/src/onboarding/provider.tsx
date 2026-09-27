@@ -62,7 +62,7 @@ export function AccessProvider({ children }: { children: ReactNode }) {
 
   const restore = useCallback(async (nextSession: Session | null) => {
     setSession(nextSession);
-    if (!nextSession) { saveWedding(null); setStage("start"); setMotifDone(false); setDraft(emptyDraft); setLoading(false); return; }
+    if (!nextSession) { saveWedding(null); setStage("start"); setMotifDone(false); setDraft(emptyDraft); setError(null); setLoading(false); return; }
     setLoading(true);
     try {
       const existing = await findExistingWedding(nextSession.user.id);
