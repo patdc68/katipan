@@ -2,7 +2,17 @@ import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipan/ui";
-import { setGuestRsvp } from "./api";
+import {
+  addGuestToGroup,
+  claimGuestAllowance,
+  createGuestAllowance,
+  deleteGuestAllowance,
+  releaseGuestAllowanceClaim,
+  removeGuestFromGroup,
+  setGuestRsvp,
+  updateGuestAllowance,
+} from "./api";
+import { AllowanceCard, AllowanceForm } from "./allowance-components";
 import { GuestFilterChip } from "./components";
 import {
   buildGuestEntries,
@@ -16,6 +26,7 @@ import {
   safeGuestError,
   SingleSubmitGate,
   type GuestEntry,
+  type GuestAllowanceDraft,
   type GuestWorkspaceData,
 } from "./model";
 import { useGuestWorkspace } from "./use-guest-workspace";
@@ -45,7 +56,7 @@ export default function GuestDetailsScreen() {
   if (error || !data) return <KatipanScreen><ErrorState description="We couldn't load this Guest." onRetry={retry} /></KatipanScreen>;
   if (!entry) return <KatipanScreen><ErrorState title="Guest unavailable" description="This Guest isn't part of the selected Wedding." onRetry={() => router.replace({ pathname: "/(wedding)/[weddingId]/guests/list", params: { weddingId } })} /></KatipanScreen>;
 
-  return <GuestDetailsContent key={`${entry.guest.id}:${entry.guest.updated_at}:${entry.rsvp?.updated_at ?? "none"}`} weddingId={weddingId} membership={membership} data={data} entry={entry} retry={retry} />;
+  return <GuestDetailsContent key={`${weddingId}:${entry.guest.id}:${entry.guest.updated_at}:${entry.rsvp?.updated_at ?? "none"}`} weddingId={weddingId} membership={membership} data={data} entry={entry} retry={retry} />;
 }
 
 function GuestDetailsContent({
@@ -68,24 +79,46 @@ function GuestDetailsContent({
   const [dietaryNotes, setDietaryNotes] = useState(() => entry.rsvp?.dietary_notes ?? "");
   const [responseNotes, setResponseNotes] = useState(() => entry.rsvp?.response_notes ?? "");
   const [saving, setSaving] = useState(false);
+  const [savingAllowanceId, setSavingAllowanceId] = useState<string | null>(null);
+  const [savingGuestId, setSavingGuestId] = useState<string | null>(null);
   const [savingError, setSavingError] = useState<string | null>(null);
+  const [allowanceEditor, setAllowanceEditor] = useState<string | "NEW" | null>(null);
+  const [confirmingDeleteAllowanceId, setConfirmingDeleteAllowanceId] = useState<string | null>(null);
   const canEdit = canManageGuestDomain(membership);
   const canReadNotes = canViewGuestNotes(membership);
   const rsvpStatus = guestRsvpStatus(entry.rsvp);
   const allowanceById = new Map(data.allowances.filter((item) => item.wedding_id === weddingId).map((item) => [item.id, item]));
-  const saveRsvp = async () => {
+  const entries = buildGuestEntries(data);
+  const householdMembers = entries.filter((candidate) => candidate.household.id === entry.household.id);
+  const sponsoredAllowances = data.allowances.filter((allowance) => allowance.wedding_id === weddingId && allowance.sponsor_guest_id === entry.guest.id);
+  const runMutation = async (
+    action: () => Promise<void>,
+    fallback = "We couldn't save this Guest change.",
+    allowanceId?: string,
+    guestId?: string,
+  ) => {
     await gate.current.run(async () => {
       if (saving) return;
       setSaving(true);
+      setSavingAllowanceId(allowanceId ?? null);
+      setSavingGuestId(guestId ?? null);
       setSavingError(null);
       try {
-        await setGuestRsvp(membership, entry.guest.id, selectedStatus, mealChoice, dietaryNotes, responseNotes);
+        await action();
         retry();
       } catch (cause) {
-        setSavingError(safeGuestError(cause, "We couldn't update this Guest's RSVP."));
-      } finally { setSaving(false); }
+        setSavingError(safeGuestError(cause, fallback));
+      } finally {
+        setSaving(false);
+        setSavingAllowanceId(null);
+        setSavingGuestId(null);
+      }
     });
   };
+  const saveRsvp = async () => runMutation(
+    () => setGuestRsvp(membership, entry.guest.id, selectedStatus, mealChoice, dietaryNotes, responseNotes),
+    "We couldn't update this Guest's RSVP.",
+  );
   const editGuest = () => router.navigate({
     pathname: "/(wedding)/[weddingId]/guests/[guestId]/edit",
     params: { weddingId, guestId: entry.guest.id },
@@ -94,6 +127,48 @@ function GuestDetailsContent({
     pathname: "/(wedding)/[weddingId]/guests/households/[householdId]",
     params: { weddingId, householdId: entry.household.id },
   });
+  const openGuestList = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/list", params: { weddingId } });
+  const openEntourage = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/entourage", params: { weddingId } });
+  const toggleGroup = (groupId: string) => {
+    const isMember = entry.groupIds.includes(groupId);
+    void runMutation(
+      () => isMember
+        ? removeGuestFromGroup(membership, groupId, entry.guest.id)
+        : addGuestToGroup(membership, groupId, entry.guest.id),
+      "We couldn't update this Guest's groups.",
+      undefined,
+      entry.guest.id,
+    );
+  };
+  const saveAllowance = (allowanceId: string | null, draft: GuestAllowanceDraft) => {
+    void runMutation(async () => {
+      if (allowanceId) await updateGuestAllowance(membership, allowanceId, draft);
+      else await createGuestAllowance(membership, draft);
+      setAllowanceEditor(null);
+    }, "We couldn't save this allowance.", allowanceId ?? entry.guest.id);
+  };
+  const removeAllowance = (allowanceId: string) => {
+    void runMutation(async () => {
+      await deleteGuestAllowance(membership, allowanceId);
+      setConfirmingDeleteAllowanceId(null);
+    }, "We couldn't remove this allowance.", allowanceId);
+  };
+  const claimAllowance = (allowanceId: string, guestId: string) => {
+    void runMutation(
+      () => claimGuestAllowance(membership, allowanceId, guestId),
+      "We couldn't claim this allowance.",
+      allowanceId,
+      guestId,
+    );
+  };
+  const releaseAllowance = (allowanceId: string, guestId: string) => {
+    void runMutation(
+      () => releaseGuestAllowanceClaim(membership, allowanceId, guestId),
+      "We couldn't release this allowance claim.",
+      allowanceId,
+      guestId,
+    );
+  };
 
   return (
     <KatipanScreen contentContainerStyle={styles.page}>
@@ -143,32 +218,126 @@ function GuestDetailsContent({
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="Guest groups" description="Groups are labels for named Guests." />
+        <SectionHeader
+          title="Guest groups"
+          description="A Guest can belong to more than one group."
+          action={canEdit ? <KatipanButton label="Manage groups" variant="text" onPress={openGuestList} /> : undefined}
+        />
         <EditorialCard style={styles.detailsCard}>
-          {entry.groupNames.length
-            ? <View style={styles.chipRow}>{entry.groupNames.map((name) => <StatusChip key={name} label={name} tone="neutral" />)}</View>
-            : <KatipanText color="textMuted">No guest groups are assigned.</KatipanText>}
+          {data.groups.filter((group) => group.wedding_id === weddingId).length ? (
+            <View style={styles.chipRow}>
+              {data.groups.filter((group) => group.wedding_id === weddingId).map((group) => (
+                <GuestFilterChip
+                  key={group.id}
+                  label={group.name}
+                  selected={entry.groupIds.includes(group.id)}
+                  disabled={!canEdit || saving}
+                  onPress={() => toggleGroup(group.id)}
+                />
+              ))}
+            </View>
+          ) : (
+            <KatipanText color="textMuted">No guest groups exist yet. Create a group from the Guest List.</KatipanText>
+          )}
+          {canEdit && <KatipanText variant="bodySmall" color="textMuted">Tap a group to add or remove this Guest.</KatipanText>}
         </EditorialCard>
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="Allowances & claims" description="Allowance claims link to real Guests; an unused allowance has no person record." />
+        <SectionHeader title="Allowance claim" description="A claim links this named Guest to one allowance. RSVP stays separate." />
         <EditorialCard style={styles.detailsCard}>
           {entry.allowanceClaims.length ? entry.allowanceClaims.map((claim) => {
             const allowance = allowanceById.get(claim.allowance_id);
-            return <DetailLine key={claim.allowance_id} label={allowance ? guestAllowanceLabel(allowance.allowance_type) : "Allowance"} value="Claimed by this Guest" />;
+            const claimCount = data.allowanceClaims.filter((item) => item.allowance_id === claim.allowance_id && item.wedding_id === weddingId).length;
+            const sponsor = allowance?.sponsor_guest_id ? entries.find((candidate) => candidate.guest.id === allowance.sponsor_guest_id) : undefined;
+            return (
+              <View key={claim.allowance_id} style={styles.claimSummary}>
+                <DetailLine
+                  label={allowance ? guestAllowanceLabel(allowance.allowance_type) : "Allowance"}
+                  value={allowance ? `${claimCount} of ${allowance.max_count} claimed` : "Claim association unavailable"}
+                />
+                {!!sponsor && <DetailLine label="Sponsored by" value={guestName(sponsor)} />}
+                {canEdit && allowance && <KatipanButton label="Release this claim" variant="secondary" loading={saving && savingAllowanceId === allowance.id && savingGuestId === entry.guest.id} onPress={() => releaseAllowance(allowance.id, entry.guest.id)} />}
+              </View>
+            );
           }) : <KatipanText color="textMuted">No allowance is claimed for this Guest.</KatipanText>}
         </EditorialCard>
       </View>
 
+      <View style={styles.section}>
+        <SectionHeader
+          title="Sponsored Plus-One allowances"
+          description="Allowance capacity belongs to this Guest and Household; adding one does not add a person."
+          action={canEdit ? <KatipanButton label="Add allowance" variant="text" disabled={saving} onPress={() => { setAllowanceEditor("NEW"); setSavingError(null); }} /> : undefined}
+        />
+        {allowanceEditor === "NEW" && (
+          <AllowanceForm
+            key="new-plus-one"
+            householdId={entry.household.id}
+            members={householdMembers}
+            fixedType="PLUS_ONE"
+            fixedSponsorGuestId={entry.guest.id}
+            saving={saving}
+            onCancel={() => setAllowanceEditor(null)}
+            onSave={(draft) => saveAllowance(null, draft)}
+          />
+        )}
+        {sponsoredAllowances.length === 0 && allowanceEditor !== "NEW" ? (
+          <EditorialCard style={styles.detailsCard}>
+            <KatipanText color="textMuted">This Guest does not sponsor a Plus-One allowance.</KatipanText>
+          </EditorialCard>
+        ) : sponsoredAllowances.map((allowance) => {
+          const claims = data.allowanceClaims.filter((claim) => claim.allowance_id === allowance.id && claim.wedding_id === weddingId);
+          return (
+            <View key={allowance.id} style={styles.allowanceSection}>
+              {allowanceEditor === allowance.id ? (
+                <AllowanceForm
+                  key={allowance.id}
+                  householdId={allowance.household_id}
+                  members={householdMembers}
+                  existing={allowance}
+                  fixedType="PLUS_ONE"
+                  fixedSponsorGuestId={entry.guest.id}
+                  saving={saving}
+                  onCancel={() => setAllowanceEditor(null)}
+                  onSave={(draft) => saveAllowance(allowance.id, draft)}
+                />
+              ) : (
+                <AllowanceCard
+                  allowance={allowance}
+                  claims={claims}
+                  allClaims={data.allowanceClaims.filter((claim) => claim.wedding_id === weddingId)}
+                  members={householdMembers}
+                  sponsor={entry}
+                  canEdit={canEdit}
+                  saving={saving}
+                  claimingGuestId={savingAllowanceId === allowance.id ? savingGuestId : null}
+                  confirmingDelete={confirmingDeleteAllowanceId === allowance.id}
+                  onClaim={(guestId) => claimAllowance(allowance.id, guestId)}
+                  onRelease={(guestId) => releaseAllowance(allowance.id, guestId)}
+                  onEdit={() => { setAllowanceEditor(allowance.id); setSavingError(null); }}
+                  onRequestDelete={() => setConfirmingDeleteAllowanceId(allowance.id)}
+                  onDelete={() => removeAllowance(allowance.id)}
+                  onCancelDelete={() => setConfirmingDeleteAllowanceId(null)}
+                />
+              )}
+            </View>
+          );
+        })}
+      </View>
+
       {entry.entourageRoles !== null && (
         <View style={styles.section}>
-          <SectionHeader title="Wedding roles" description="Existing entourage assignments" />
+          <SectionHeader
+            title="Entourage roles"
+            description="Existing roles use this Guest record."
+            action={<KatipanButton label={canEdit ? "Manage roles" : "View roles"} variant="text" onPress={openEntourage} />}
+          />
           <EditorialCard style={styles.detailsCard}>
             {entry.entourageRoles.length
               ? <View style={styles.chipRow}>{entry.entourageRoles.map((role) => <StatusChip key={role} label={role} tone="success" />)}</View>
               : <KatipanText color="textMuted">No entourage role is recorded.</KatipanText>}
-            <KatipanText variant="bodySmall" color="textMuted">Role management is available in a later slice.</KatipanText>
+            <KatipanText variant="bodySmall" color="textMuted">A role does not change this Guest&apos;s RSVP, seating, Guest Pass or check-in.</KatipanText>
           </EditorialCard>
         </View>
       )}
@@ -232,6 +401,8 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: s.small },
   detailLine: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: s.medium },
   detailValue: { flex: 1, textAlign: "right" },
+  claimSummary: { gap: s.small },
+  allowanceSection: { gap: s.medium },
   notesCard: { gap: s.medium, padding: s.medium, backgroundColor: c.warmAlabaster },
   separationCard: { gap: s.small, padding: s.medium, backgroundColor: c.surfaceLow },
 });

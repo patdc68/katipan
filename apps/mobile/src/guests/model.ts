@@ -10,6 +10,8 @@ export type GuestGroup = Database["public"]["Tables"]["guest_groups"]["Row"];
 export type GuestGroupMembership = Database["public"]["Tables"]["guest_group_memberships"]["Row"];
 export type GuestAllowance = Database["public"]["Tables"]["guest_allowances"]["Row"];
 export type GuestAllowanceClaim = Database["public"]["Tables"]["guest_allowance_claims"]["Row"];
+export type GuestEntourageRole = Database["public"]["Tables"]["entourage_roles"]["Row"];
+export type GuestEntourageAssignment = Database["public"]["Tables"]["entourage_assignments"]["Row"];
 export type GuestHouseholdProgress = Database["public"]["Views"]["guest_household_rsvp_progress"]["Row"];
 export type GuestRsvpStatus = Database["public"]["Enums"]["guest_rsvp_status"];
 export type GuestAllowanceType = Database["public"]["Enums"]["guest_allowance_type"];
@@ -30,6 +32,8 @@ export type GuestWorkspaceData = {
   allowanceClaims: GuestAllowanceClaim[];
   householdProgress: GuestHouseholdProgress[];
   entourage: GuestEntourageSummary[] | null;
+  entourageRoles: GuestEntourageRole[] | null;
+  entourageAssignments: GuestEntourageAssignment[] | null;
   seating: GuestSeatingSummary[] | null;
 };
 
@@ -56,6 +60,11 @@ export type GuestSummary = {
   notSentHouseholds: number;
 };
 
+export type EntourageRoleEntry = {
+  role: GuestEntourageRole;
+  guests: GuestEntry[];
+};
+
 export type GuestListFilters = {
   search: string;
   status: "ALL" | GuestRsvpStatus;
@@ -65,6 +74,9 @@ export type GuestListFilters = {
 
 export type GuestDraft = z.infer<typeof guestDraftSchema>;
 export type HouseholdDraft = z.infer<typeof householdDraftSchema>;
+export type GuestGroupDraft = z.input<typeof guestGroupDraftSchema>;
+export type EntourageRoleDraft = z.input<typeof entourageRoleDraftSchema>;
+export type GuestAllowanceDraft = z.infer<typeof guestAllowanceDraftSchema>;
 
 const nullableText = (max: number) => z.string().trim().max(max).or(z.literal(""));
 const nullableEmail = z.string().trim().max(254).refine(
@@ -85,6 +97,29 @@ export const guestDraftSchema = z.object({
 export const householdDraftSchema = z.object({
   displayName: z.string().trim().min(1, "Enter a Household name.").max(160),
   notes: nullableText(4000),
+});
+
+export const guestGroupDraftSchema = z.object({
+  name: z.string().trim().min(1, "Enter a group name.").max(80),
+});
+
+export const entourageRoleDraftSchema = z.object({
+  name: z.string().trim().min(1, "Enter a role name.").max(120),
+  description: nullableText(1000),
+});
+
+export const guestAllowanceDraftSchema = z.object({
+  householdId: z.string().trim().min(1, "Choose a Household."),
+  allowanceType: z.enum(["PLUS_ONE", "CHILD"]),
+  sponsorGuestId: z.string().trim().nullable(),
+  maxCount: z.coerce.number().int("Enter a whole number.").min(1, "Allowance capacity must be at least one.").max(32767, "Allowance capacity is too large."),
+}).superRefine((draft, context) => {
+  if (draft.allowanceType === "PLUS_ONE" && !draft.sponsorGuestId) {
+    context.addIssue({ code: "custom", path: ["sponsorGuestId"], message: "Choose the Guest sponsoring this Plus-One allowance." });
+  }
+  if (draft.allowanceType === "CHILD" && draft.sponsorGuestId !== null) {
+    context.addIssue({ code: "custom", path: ["sponsorGuestId"], message: "A Child allowance must not have a Guest sponsor." });
+  }
 });
 
 export const guestRsvpStatuses = ["NO_RESPONSE", "ATTENDING", "DECLINED"] as const satisfies readonly GuestRsvpStatus[];
@@ -176,10 +211,17 @@ export function buildGuestEntries(data: GuestWorkspaceData): GuestEntry[] {
   const groupsById = new Map(data.groups.map((group) => [group.id, group]));
   const groupIdsByGuestId = new Map<string, string[]>();
   for (const item of data.groupMemberships) {
+    const group = groupsById.get(item.guest_group_id);
+    if (item.wedding_id !== data.weddingId || group?.wedding_id !== data.weddingId
+      || !data.guests.some((guest) => guest.id === item.guest_id && guest.wedding_id === data.weddingId)) continue;
     groupIdsByGuestId.set(item.guest_id, [...(groupIdsByGuestId.get(item.guest_id) ?? []), item.guest_group_id]);
   }
+  const allowancesById = new Map(data.allowances.map((allowance) => [allowance.id, allowance]));
   const claimsByGuestId = new Map<string, GuestAllowanceClaim[]>();
   for (const item of data.allowanceClaims) {
+    const allowance = allowancesById.get(item.allowance_id);
+    if (item.wedding_id !== data.weddingId || allowance?.wedding_id !== data.weddingId
+      || !data.guests.some((guest) => guest.id === item.guest_id && guest.wedding_id === data.weddingId)) continue;
     claimsByGuestId.set(item.guest_id, [...(claimsByGuestId.get(item.guest_id) ?? []), item]);
   }
   const entourageByGuestId = new Map<string, string[]>();
@@ -212,6 +254,22 @@ export function buildGuestEntries(data: GuestWorkspaceData): GuestEntry[] {
       seating: data.seating === null ? null : seatingByGuestId.get(guest.id) ?? [],
     }];
   });
+}
+
+export function buildEntourageRoleEntries(data: GuestWorkspaceData, weddingId = data.weddingId): EntourageRoleEntry[] {
+  if (weddingId !== data.weddingId || data.entourageRoles === null || data.entourageAssignments === null) return [];
+  const guestsById = new Map(buildGuestEntries(data).map((entry) => [entry.guest.id, entry]));
+  const assignmentsByRoleId = new Map<string, GuestEntry[]>();
+  for (const assignment of data.entourageAssignments) {
+    const guest = guestsById.get(assignment.guest_id);
+    if (assignment.wedding_id !== weddingId || !guest) continue;
+    assignmentsByRoleId.set(assignment.role_id, [...(assignmentsByRoleId.get(assignment.role_id) ?? []), guest]);
+  }
+  return data.entourageRoles
+    .filter((role) => role.wedding_id === weddingId)
+    .slice()
+    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
+    .map((role) => ({ role, guests: assignmentsByRoleId.get(role.id) ?? [] }));
 }
 
 export function filterGuestEntries(entries: readonly GuestEntry[], filters: GuestListFilters): GuestEntry[] {
@@ -280,10 +338,22 @@ export function guestAllowanceLabel(type: GuestAllowanceType): string {
 
 export function safeGuestError(error: unknown, fallback = "We couldn't save this guest change. Try again."): string {
   if (!error || typeof error !== "object" || !("code" in error)) return fallback;
+  const constraint = "constraint" in error && typeof error.constraint === "string" ? error.constraint : "";
   switch (error.code) {
     case "42501": return "You don't have permission to make this guest change.";
     case "23503": return "Choose a Guest or Household from this Wedding.";
-    case "23505": return "This person is already a Guest in this Wedding.";
+    case "23505":
+      if (constraint === "guest_groups_wedding_normalized_name_idx") return "A group with this name already exists in this Wedding.";
+      if (constraint === "guest_group_memberships_pkey") return "This Guest is already in that group.";
+      if (constraint === "entourage_roles_wedding_normalized_name_idx") return "An entourage role with this name already exists in this Wedding.";
+      if (constraint === "entourage_assignments_wedding_role_guest_key") return "This Guest already has that entourage role.";
+      return "This person is already a Guest in this Wedding.";
+    case "23514":
+      if (constraint === "guest_allowance_claims_capacity_check") return "This allowance is full. Release a claim or choose another allowance.";
+      if (constraint === "guest_allowances_sponsor_same_household_check" || constraint === "guest_allowance_claims_same_household_check") return "Choose a sponsor and named Guest from the same Household.";
+      if (constraint === "guest_allowances_claimed_immutable") return "Release every claim before editing or removing this allowance.";
+      if (constraint === "guest_allowances_max_count_check") return "Allowance capacity must be at least one.";
+      return fallback;
     case "22023": return "This record is unavailable in the selected Wedding.";
     default: return fallback;
   }

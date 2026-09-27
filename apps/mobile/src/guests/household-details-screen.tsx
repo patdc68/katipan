@@ -1,20 +1,23 @@
 import { useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipan/ui";
+import { colorTokens as c, spacingTokens as s } from "@katipan/ui";
 import {
   claimGuestAllowance,
+  createGuestAllowance,
+  deleteGuestAllowance,
   markHouseholdInvitationSent,
   releaseGuestAllowanceClaim,
   resetHouseholdInvitationDelivery,
+  updateGuestAllowance,
 } from "./api";
-import { GuestFilterChip, GuestRow, ProgressBar } from "./components";
+import { AllowanceCard, AllowanceForm } from "./allowance-components";
+import { GuestRow, ProgressBar } from "./components";
 import {
   buildGuestEntries,
   canManageGuestDomain,
   canViewGuestNotes,
   deriveHouseholdProgress,
-  guestAllowanceLabel,
   householdProgressLabel,
   safeGuestError,
   SingleSubmitGate,
@@ -41,6 +44,9 @@ export default function HouseholdDetailsScreen() {
   const [saving, setSaving] = useState(false);
   const [savingError, setSavingError] = useState<string | null>(null);
   const [claimingAllowanceId, setClaimingAllowanceId] = useState<string | null>(null);
+  const [claimingGuestId, setClaimingGuestId] = useState<string | null>(null);
+  const [allowanceEditor, setAllowanceEditor] = useState<string | "NEW" | null>(null);
+  const [confirmingDeleteAllowanceId, setConfirmingDeleteAllowanceId] = useState<string | null>(null);
 
   if (loading || (membership && !isCurrent)) return <KatipanScreen><LoadingState label="Loading Household details…" /></KatipanScreen>;
   if (!membership || !isCurrent) return <KatipanScreen><ErrorState title="Wedding workspace unavailable" description="Choose a Wedding you currently belong to." onRetry={() => router.replace("/(workspace)/weddings")} /></KatipanScreen>;
@@ -61,12 +67,13 @@ export default function HouseholdDetailsScreen() {
   const progressPercent = totalGuests === 0 ? 0 : Math.round((respondedGuests / totalGuests) * 100);
   const allowances = data.allowances.filter((item) => item.wedding_id === weddingId && item.household_id === household.id);
 
-  const runMutation = async (action: () => Promise<void>, allowanceId?: string) => {
+  const runMutation = async (action: () => Promise<void>, allowanceId?: string, guestId?: string) => {
     await gate.current.run(async () => {
       if (saving) return;
       setSaving(true);
       setSavingError(null);
       setClaimingAllowanceId(allowanceId ?? null);
+      setClaimingGuestId(guestId ?? null);
       try {
         await action();
         retry();
@@ -75,6 +82,7 @@ export default function HouseholdDetailsScreen() {
       } finally {
         setSaving(false);
         setClaimingAllowanceId(null);
+        setClaimingGuestId(null);
       }
     });
   };
@@ -146,51 +154,52 @@ export default function HouseholdDetailsScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="Guest allowances" description="An unused plus one or child allowance is not a named Guest." />
+        <SectionHeader
+          title="Guest allowances"
+          description="Plus-One allowances have a Guest sponsor. Child allowances belong to the Household. Unused allowances do not create people."
+          action={canEdit ? <KatipanButton label="Add allowance" variant="text" disabled={saving} onPress={() => { setAllowanceEditor("NEW"); setSavingError(null); }} /> : undefined}
+        />
+        {allowanceEditor && (
+          <AllowanceForm
+            key={allowanceEditor}
+            householdId={household.id}
+            members={members}
+            existing={allowanceEditor === "NEW" ? undefined : allowances.find((item) => item.id === allowanceEditor)}
+            saving={saving}
+            onCancel={() => setAllowanceEditor(null)}
+            onSave={(draft) => void runMutation(async () => {
+              if (allowanceEditor === "NEW") await createGuestAllowance(membership, draft);
+              else await updateGuestAllowance(membership, allowanceEditor, draft);
+              setAllowanceEditor(null);
+            }, allowanceEditor === "NEW" ? undefined : allowanceEditor)}
+          />
+        )}
         {allowances.length === 0 ? (
           <EditorialCard style={styles.compactCard}><KatipanText color="textMuted">No allowances are recorded for this Household.</KatipanText></EditorialCard>
         ) : allowances.map((allowance) => {
           const claims = data.allowanceClaims.filter((claim) => claim.allowance_id === allowance.id && claim.wedding_id === weddingId);
-          const claimGuestIds = new Set(claims.map((claim) => claim.guest_id));
-          const candidates = members.filter((entry) => !claimGuestIds.has(entry.guest.id));
-          const canClaim = canEdit && claims.length < allowance.max_count;
           return (
-            <EditorialCard key={allowance.id} style={styles.allowanceCard}>
-              <View style={styles.allowanceHeading}>
-                <View style={styles.allowanceCopy}>
-                  <KatipanText variant="title">{guestAllowanceLabel(allowance.allowance_type)}</KatipanText>
-                  <KatipanText variant="bodySmall" color="textMuted">{claims.length} of {allowance.max_count} claimed</KatipanText>
-                </View>
-                <StatusChip label={claims.length >= allowance.max_count ? "Claimed" : "Available"} tone={claims.length >= allowance.max_count ? "success" : "neutral"} />
-              </View>
-              {claims.map((claim) => {
-                const entry = members.find((item) => item.guest.id === claim.guest_id);
-                return (
-                  <View key={claim.guest_id} style={styles.claimRow}>
-                    <KatipanText variant="bodySmall" style={styles.claimName}>{entry?.person.display_name ?? "Guest"}</KatipanText>
-                    {canEdit && <GuestFilterChip label="Release" selected={false} disabled={saving} onPress={() => void runMutation(() => releaseGuestAllowanceClaim(membership, allowance.id, claim.guest_id), allowance.id)} />}
-                  </View>
-                );
-              })}
-              {canClaim && (candidates.length > 0 ? (
-                <View style={styles.claimChoices}>
-                  <KatipanText variant="labelCaps" color="secondary">LINK TO A NAMED GUEST</KatipanText>
-                  {candidates.map((entry) => (
-                    <Pressable
-                      key={entry.guest.id}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Claim ${guestAllowanceLabel(allowance.allowance_type)} allowance for ${entry.person.display_name}`}
-                      disabled={saving}
-                      onPress={() => void runMutation(() => claimGuestAllowance(membership, allowance.id, entry.guest.id), allowance.id)}
-                      style={styles.claimChoice}
-                    >
-                      <KatipanText variant="labelLarge" color="primary">{entry.person.display_name}</KatipanText>
-                      <KatipanText variant="bodySmall" color="textMuted">{claimingAllowanceId === allowance.id ? "Saving…" : "Claim allowance"}</KatipanText>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : <KatipanText variant="bodySmall" color="textMuted">Add a named Guest before claiming this allowance.</KatipanText>)}
-            </EditorialCard>
+            <AllowanceCard
+              key={allowance.id}
+              allowance={allowance}
+              claims={claims}
+              allClaims={data.allowanceClaims.filter((claim) => claim.wedding_id === weddingId)}
+              members={members}
+              sponsor={members.find((entry) => entry.guest.id === allowance.sponsor_guest_id)}
+              canEdit={canEdit}
+              saving={saving}
+              claimingGuestId={claimingAllowanceId === allowance.id ? claimingGuestId : null}
+              confirmingDelete={confirmingDeleteAllowanceId === allowance.id}
+              onClaim={(guestId) => void runMutation(() => claimGuestAllowance(membership, allowance.id, guestId), allowance.id, guestId)}
+              onRelease={(guestId) => void runMutation(() => releaseGuestAllowanceClaim(membership, allowance.id, guestId), allowance.id, guestId)}
+              onEdit={() => { setAllowanceEditor(allowance.id); setSavingError(null); }}
+              onRequestDelete={() => setConfirmingDeleteAllowanceId(allowance.id)}
+              onDelete={() => void runMutation(async () => {
+                await deleteGuestAllowance(membership, allowance.id);
+                setConfirmingDeleteAllowanceId(null);
+              }, allowance.id)}
+              onCancelDelete={() => setConfirmingDeleteAllowanceId(null)}
+            />
           );
         })}
       </View>
@@ -221,12 +230,5 @@ const styles = StyleSheet.create({
   progressCopy: { flex: 1, gap: s.small },
   emptyCard: { padding: 0 },
   compactCard: { padding: s.medium },
-  allowanceCard: { gap: s.medium, padding: s.medium },
-  allowanceHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: s.medium },
-  allowanceCopy: { flex: 1, gap: s.micro },
-  claimRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: s.small, paddingVertical: s.small, borderTopWidth: 1, borderTopColor: c.stoneBorder },
-  claimName: { flex: 1 },
-  claimChoices: { gap: s.small, paddingTop: s.small, borderTopWidth: 1, borderTopColor: c.stoneBorder },
-  claimChoice: { minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: s.small, padding: s.small, borderRadius: r.medium, backgroundColor: c.surfaceLow },
   notesCard: { padding: s.medium, backgroundColor: c.warmAlabaster },
 });
