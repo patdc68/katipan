@@ -7,6 +7,7 @@
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@katipan/database": "^0.1.0",
     "@katipan/ui": "^0.1.0",
+    "@katipan/validation": "^0.1.0",
     "@supabase/supabase-js": "^2.117.1",
     "expo": "~57.0.24",
     "expo-constants": "~57.0.19",
