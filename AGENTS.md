@@ -45,6 +45,20 @@ Never confuse the application API URL with the MCP server URL.
 9. Prefer explicit constraints and transaction-safe server operations over client-only assumptions.
 10. Preserve backward-compatible migration paths where reasonable.
 
+## UI design source of truth
+
+For every Katipan UI task:
+
+1. Query the matching Stitch screen first.
+2. Use the **Warm Editorial Nuptial** design system as the base.
+3. Preserve typography, spacing, colors, shapes, hierarchy, imagery, and interaction intent.
+4. Build reusable React Native components rather than copying screen-specific styles.
+5. Adapt only when required by accessibility, native-platform behavior, or locked backend/domain rules.
+6. Document intentional visual deviations.
+
+Stitch project: **Katipan Wedding Planner UI System** (`13691899610292683671`).
+If Stitch structured tokens, prose, and an individual screen disagree, inspect actual screen usage and document the chosen canonical value. Do not silently invent a replacement. See `docs/ui/stitch-ui-source-of-truth.md`.
+
 ## Product invariants
 
 ### Wedding membership
