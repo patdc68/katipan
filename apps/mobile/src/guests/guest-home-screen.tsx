@@ -30,6 +30,7 @@ export default function GuestHomeScreen() {
   const canEdit = canManageGuestDomain(membership);
   const weddingName = weddingDisplayName(membership.partnerNames, membership.wedding.display_name);
   const openList = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/list", params: { weddingId } });
+  const openEntourage = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/entourage", params: { weddingId } });
   const openHousehold = (householdId: string) => router.navigate({
     pathname: "/(wedding)/[weddingId]/guests/households/[householdId]",
     params: { weddingId, householdId },
@@ -62,6 +63,7 @@ export default function GuestHomeScreen() {
           <SummaryCount label="DECLINED" value={summary.declined} tone="error" />
         </View>
         <KatipanButton label="Open Guest List" onPress={openList} />
+        <KatipanButton label={canEdit ? "Manage Entourage Roles" : "View Entourage Roles"} variant="secondary" onPress={openEntourage} />
         {canEdit && <KatipanButton label="Create Household" variant="secondary" onPress={() => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/households/new", params: { weddingId } })} />}
       </EditorialCard>
 

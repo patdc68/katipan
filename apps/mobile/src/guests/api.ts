@@ -2,11 +2,20 @@ import type { Database } from "@katipan/database/types";
 import { supabase } from "../auth/client";
 import type { WorkspaceMembership } from "../workspace/model";
 import {
+  entourageRoleDraftSchema,
+  guestAllowanceDraftSchema,
   guestDraftSchema,
+  guestGroupDraftSchema,
   householdDraftSchema,
   type GuestDraft,
+  type GuestAllowance,
+  type GuestAllowanceDraft,
+  type GuestEntourageRole,
   type GuestEntourageSummary,
+  type GuestGroup,
+  type GuestGroupDraft,
   type GuestHousehold,
+  type EntourageRoleDraft,
   type GuestSeatingSummary,
   type GuestWorkspaceData,
   type HouseholdDraft,
@@ -52,6 +61,45 @@ async function assertGuestInWedding(weddingId: string, guestId: string) {
   if (error) throw error;
   if (!data || data.wedding_id !== weddingId) {
     throw Object.assign(new Error("Guest is unavailable in this Wedding."), { code: "22023" });
+  }
+  return data;
+}
+
+async function assertGroupInWedding(weddingId: string, groupId: string): Promise<GuestGroup> {
+  const { data, error } = await supabase.from("guest_groups")
+    .select("*")
+    .eq("id", groupId)
+    .eq("wedding_id", weddingId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || data.wedding_id !== weddingId) {
+    throw Object.assign(new Error("Group is unavailable in this Wedding."), { code: "22023" });
+  }
+  return data;
+}
+
+async function assertEntourageRoleInWedding(weddingId: string, roleId: string): Promise<GuestEntourageRole> {
+  const { data, error } = await supabase.from("entourage_roles")
+    .select("*")
+    .eq("id", roleId)
+    .eq("wedding_id", weddingId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || data.wedding_id !== weddingId) {
+    throw Object.assign(new Error("Entourage role is unavailable in this Wedding."), { code: "22023" });
+  }
+  return data;
+}
+
+async function assertAllowanceInWedding(weddingId: string, allowanceId: string): Promise<GuestAllowance> {
+  const { data, error } = await supabase.from("guest_allowances")
+    .select("*")
+    .eq("id", allowanceId)
+    .eq("wedding_id", weddingId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || data.wedding_id !== weddingId) {
+    throw Object.assign(new Error("Allowance is unavailable in this Wedding."), { code: "22023" });
   }
   return data;
 }
@@ -134,8 +182,237 @@ export async function loadGuestWorkspace(membership: WorkspaceMembership): Promi
     allowanceClaims: allowanceClaimsResult.data ?? [],
     householdProgress: householdProgressResult.data ?? [],
     entourage,
+    entourageRoles: entourageRolesResult.error
+      ? null
+      : (entourageRolesResult.data ?? []).filter((role) => role.wedding_id === weddingId),
+    entourageAssignments: entourageRolesResult.error || entourageAssignmentsResult.error
+      ? null
+      : (entourageAssignmentsResult.data ?? []).filter((assignment) => assignment.wedding_id === weddingId),
     seating,
   };
+}
+
+export async function createGuestGroup(membership: WorkspaceMembership, draft: GuestGroupDraft): Promise<string> {
+  assertGuestManager(membership);
+  const value = guestGroupDraftSchema.parse(draft);
+  const { data, error } = await supabase.from("guest_groups")
+    .insert({ wedding_id: membership.weddingId, name: value.name })
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Guest group could not be created.");
+  return data.id;
+}
+
+export async function updateGuestGroup(
+  membership: WorkspaceMembership,
+  groupId: string,
+  draft: GuestGroupDraft,
+): Promise<void> {
+  assertGuestManager(membership);
+  await assertGroupInWedding(membership.weddingId, groupId);
+  const value = guestGroupDraftSchema.parse(draft);
+  const { data, error } = await supabase.from("guest_groups")
+    .update({ name: value.name })
+    .eq("id", groupId)
+    .eq("wedding_id", membership.weddingId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw Object.assign(new Error("Group is unavailable in this Wedding."), { code: "22023" });
+}
+
+export async function deleteGuestGroup(membership: WorkspaceMembership, groupId: string): Promise<void> {
+  assertGuestManager(membership);
+  await assertGroupInWedding(membership.weddingId, groupId);
+  const { data, error } = await supabase.from("guest_groups")
+    .delete()
+    .eq("id", groupId)
+    .eq("wedding_id", membership.weddingId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw Object.assign(new Error("Group is unavailable in this Wedding."), { code: "22023" });
+}
+
+export async function addGuestToGroup(membership: WorkspaceMembership, groupId: string, guestId: string): Promise<void> {
+  assertGuestManager(membership);
+  await Promise.all([
+    assertGroupInWedding(membership.weddingId, groupId),
+    assertGuestInWedding(membership.weddingId, guestId),
+  ]);
+  const { error } = await supabase.from("guest_group_memberships")
+    .insert({ wedding_id: membership.weddingId, guest_group_id: groupId, guest_id: guestId });
+  if (error) throw error;
+}
+
+export async function removeGuestFromGroup(membership: WorkspaceMembership, groupId: string, guestId: string): Promise<void> {
+  assertGuestManager(membership);
+  await Promise.all([
+    assertGroupInWedding(membership.weddingId, groupId),
+    assertGuestInWedding(membership.weddingId, guestId),
+  ]);
+  const { data, error } = await supabase.from("guest_group_memberships")
+    .delete()
+    .eq("wedding_id", membership.weddingId)
+    .eq("guest_group_id", groupId)
+    .eq("guest_id", guestId)
+    .select("guest_id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw Object.assign(new Error("Group membership is unavailable in this Wedding."), { code: "22023" });
+}
+
+export async function createEntourageRole(membership: WorkspaceMembership, draft: EntourageRoleDraft): Promise<string> {
+  assertGuestManager(membership);
+  const value = entourageRoleDraftSchema.parse(draft);
+  const { data, error } = await supabase.from("entourage_roles")
+    .insert({ wedding_id: membership.weddingId, name: value.name, description: textOrNull(value.description) })
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Entourage role could not be created.");
+  return data.id;
+}
+
+export async function updateEntourageRole(
+  membership: WorkspaceMembership,
+  roleId: string,
+  draft: EntourageRoleDraft,
+): Promise<void> {
+  assertGuestManager(membership);
+  await assertEntourageRoleInWedding(membership.weddingId, roleId);
+  const value = entourageRoleDraftSchema.parse(draft);
+  const { data, error } = await supabase.from("entourage_roles")
+    .update({ name: value.name, description: textOrNull(value.description) })
+    .eq("id", roleId)
+    .eq("wedding_id", membership.weddingId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw Object.assign(new Error("Entourage role is unavailable in this Wedding."), { code: "22023" });
+}
+
+export async function deleteEntourageRole(membership: WorkspaceMembership, roleId: string): Promise<void> {
+  assertGuestManager(membership);
+  await assertEntourageRoleInWedding(membership.weddingId, roleId);
+  const { data, error } = await supabase.from("entourage_roles")
+    .delete()
+    .eq("id", roleId)
+    .eq("wedding_id", membership.weddingId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw Object.assign(new Error("Entourage role is unavailable in this Wedding."), { code: "22023" });
+}
+
+export async function assignGuestToEntourageRole(
+  membership: WorkspaceMembership,
+  roleId: string,
+  guestId: string,
+): Promise<void> {
+  assertGuestManager(membership);
+  await Promise.all([
+    assertEntourageRoleInWedding(membership.weddingId, roleId),
+    assertGuestInWedding(membership.weddingId, guestId),
+  ]);
+  const { error } = await supabase.from("entourage_assignments")
+    .insert({ wedding_id: membership.weddingId, role_id: roleId, guest_id: guestId });
+  if (error) throw error;
+}
+
+export async function removeGuestFromEntourageRole(
+  membership: WorkspaceMembership,
+  roleId: string,
+  guestId: string,
+): Promise<void> {
+  assertGuestManager(membership);
+  await Promise.all([
+    assertEntourageRoleInWedding(membership.weddingId, roleId),
+    assertGuestInWedding(membership.weddingId, guestId),
+  ]);
+  const { data, error } = await supabase.from("entourage_assignments")
+    .delete()
+    .eq("wedding_id", membership.weddingId)
+    .eq("role_id", roleId)
+    .eq("guest_id", guestId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw Object.assign(new Error("Entourage assignment is unavailable in this Wedding."), { code: "22023" });
+}
+
+function allowanceValues(draft: GuestAllowanceDraft) {
+  const value = guestAllowanceDraftSchema.parse(draft);
+  return {
+    household_id: value.householdId,
+    allowance_type: value.allowanceType,
+    sponsor_guest_id: value.sponsorGuestId,
+    max_count: value.maxCount,
+  };
+}
+
+async function assertAllowanceConfiguration(
+  weddingId: string,
+  householdId: string,
+  allowanceType: "PLUS_ONE" | "CHILD",
+  sponsorGuestId: string | null,
+): Promise<void> {
+  await assertHouseholdInWedding(weddingId, householdId);
+  if (allowanceType === "CHILD") {
+    if (sponsorGuestId !== null) throw Object.assign(new Error("A Child allowance has no Guest sponsor."), { code: "22023" });
+    return;
+  }
+  if (!sponsorGuestId) throw Object.assign(new Error("Choose a Guest to sponsor this Plus-One allowance."), { code: "22023" });
+  const sponsor = await assertGuestInWedding(weddingId, sponsorGuestId);
+  if (sponsor.household_id !== householdId) {
+    throw Object.assign(new Error("The Plus-One sponsor must belong to this Household."), { code: "23514", constraint: "guest_allowances_sponsor_same_household_check" });
+  }
+}
+
+export async function createGuestAllowance(membership: WorkspaceMembership, draft: GuestAllowanceDraft): Promise<string> {
+  assertGuestManager(membership);
+  const values = allowanceValues(draft);
+  await assertAllowanceConfiguration(membership.weddingId, values.household_id, values.allowance_type, values.sponsor_guest_id);
+  const { data, error } = await supabase.from("guest_allowances")
+    .insert({ wedding_id: membership.weddingId, ...values })
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Allowance could not be created.");
+  return data.id;
+}
+
+export async function updateGuestAllowance(
+  membership: WorkspaceMembership,
+  allowanceId: string,
+  draft: GuestAllowanceDraft,
+): Promise<void> {
+  assertGuestManager(membership);
+  await assertAllowanceInWedding(membership.weddingId, allowanceId);
+  const values = allowanceValues(draft);
+  await assertAllowanceConfiguration(membership.weddingId, values.household_id, values.allowance_type, values.sponsor_guest_id);
+  const { data, error } = await supabase.from("guest_allowances")
+    .update(values)
+    .eq("id", allowanceId)
+    .eq("wedding_id", membership.weddingId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw Object.assign(new Error("Allowance is unavailable in this Wedding."), { code: "22023" });
+}
+
+export async function deleteGuestAllowance(membership: WorkspaceMembership, allowanceId: string): Promise<void> {
+  assertGuestManager(membership);
+  await assertAllowanceInWedding(membership.weddingId, allowanceId);
+  const { data, error } = await supabase.from("guest_allowances")
+    .delete()
+    .eq("id", allowanceId)
+    .eq("wedding_id", membership.weddingId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw Object.assign(new Error("Allowance is unavailable in this Wedding."), { code: "22023" });
 }
 
 export async function createGuestHousehold(

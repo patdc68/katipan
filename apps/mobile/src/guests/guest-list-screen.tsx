@@ -15,7 +15,8 @@ import {
   StatusChip,
 } from "../ui";
 import { buildGuestEntries, canManageGuestDomain, filterGuestEntries, guestListStatusFilters, guestRsvpLabel } from "./model";
-import { GuestFilterChip, GuestRow } from "./components";
+import { GuestFilterChip, GuestRow, GuestSectionNavigation } from "./components";
+import { GroupManagementPanel } from "./group-management-panel";
 import { useGuestWorkspace } from "./use-guest-workspace";
 
 export default function GuestListScreen() {
@@ -23,9 +24,11 @@ export default function GuestListScreen() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<(typeof guestListStatusFilters)[number]>("ALL");
   const [groupId, setGroupId] = useState<string | undefined>();
+  const [manageGroups, setManageGroups] = useState(false);
   const router = useRouter();
   const entries = data ? buildGuestEntries(data) : [];
-  const filtered = data ? filterGuestEntries(entries, { search, status, groupId }) : [];
+  const selectedGroupId = data?.groups.some((group) => group.id === groupId) ? groupId : undefined;
+  const filtered = data ? filterGuestEntries(entries, { search, status, groupId: selectedGroupId }) : [];
   const groupsByHousehold = (data?.households ?? []).map((household) => ({
     household,
     guests: filtered.filter((entry) => entry.household.id === household.id),
@@ -42,6 +45,7 @@ export default function GuestListScreen() {
   });
   const addGuest = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/add", params: { weddingId } });
   const addHousehold = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/households/new", params: { weddingId } });
+  const openEntourage = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/entourage", params: { weddingId } });
 
   return (
     <KatipanScreen contentContainerStyle={styles.page}>
@@ -50,6 +54,12 @@ export default function GuestListScreen() {
         <KatipanText variant="headlineLarge" accessibilityRole="header">Guest List</KatipanText>
         <KatipanText color="textMuted">{entries.length} individual {entries.length === 1 ? "Guest" : "Guests"} across {data.households.length} {data.households.length === 1 ? "Household" : "Households"}</KatipanText>
       </View>
+
+      <GuestSectionNavigation
+        active="GUESTS"
+        onGuestsPress={() => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/list", params: { weddingId } })}
+        onEntouragePress={openEntourage}
+      />
 
       <EditorialCard style={styles.summaryCard}>
         <View style={styles.summaryHeading}>
@@ -83,15 +93,25 @@ export default function GuestListScreen() {
         </ScrollView>
       </View>
 
-      {data.groups.length > 0 && (
+      {(data.groups.length > 0 || canEdit) && (
         <View style={styles.filterSection}>
-          <KatipanText variant="labelCaps" color="secondary">GUEST GROUP</KatipanText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterList}>
-            <GuestFilterChip label="All groups" selected={!groupId} onPress={() => setGroupId(undefined)} />
-            {data.groups.map((group) => (
-              <GuestFilterChip key={group.id} label={group.name} selected={groupId === group.id} onPress={() => setGroupId(group.id)} />
-            ))}
-          </ScrollView>
+          <View style={styles.groupFilterHeading}>
+            <KatipanText variant="labelCaps" color="secondary">GUEST GROUP</KatipanText>
+            {canEdit && <KatipanButton label={manageGroups ? "Done" : "Manage groups"} variant="text" onPress={() => setManageGroups((current) => !current)} />}
+          </View>
+          {data.groups.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterList}>
+              <GuestFilterChip label="All groups" selected={!selectedGroupId} onPress={() => setGroupId(undefined)} />
+              {data.groups.map((group) => (
+                <GuestFilterChip key={group.id} label={group.name} selected={selectedGroupId === group.id} onPress={() => setGroupId(group.id)} />
+              ))}
+            </ScrollView>
+          ) : (
+            <KatipanText variant="bodySmall" color="textMuted">Add a group when you want to organize Guests beyond their Household.</KatipanText>
+          )}
+          {manageGroups && canEdit && (
+            <GroupManagementPanel key={weddingId} groups={data.groups} entries={entries} membership={membership} onChanged={retry} />
+          )}
         </View>
       )}
 
@@ -136,6 +156,7 @@ const styles = StyleSheet.create({
   searchBlock: { gap: s.small },
   filterSection: { gap: s.small },
   filterList: { gap: s.small, paddingRight: s.medium },
+  groupFilterHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: s.small },
   results: { gap: s.medium },
   emptyCard: { padding: 0 },
   householdGroup: { gap: s.small },

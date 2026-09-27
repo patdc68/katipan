@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { WorkspaceMembership } from "../workspace/model";
 import {
   availableWeddingPeople,
+  buildEntourageRoleEntries,
   buildGuestEntries,
   canManageGuestDomain,
   canViewGuestNotes,
@@ -9,7 +10,10 @@ import {
   deriveHouseholdProgress,
   filterGuestEntries,
   guestAllowanceLabel,
+  guestAllowanceDraftSchema,
   guestDraftSchema,
+  guestGroupDraftSchema,
+  entourageRoleDraftSchema,
   guestRsvpStatus,
   householdDraftSchema,
   isGuestInWedding,
@@ -17,6 +21,7 @@ import {
   safeGuestError,
   SingleSubmitGate,
   type Guest,
+  type GuestEntourageRole,
   type GuestHousehold,
   type GuestPerson,
   type GuestRsvp,
@@ -27,6 +32,8 @@ const weddingId = "10000000-0000-4000-8000-000000000001";
 const otherWeddingId = "10000000-0000-4000-8000-000000000002";
 const householdId = "20000000-0000-4000-8000-000000000001";
 const secondHouseholdId = "20000000-0000-4000-8000-000000000002";
+const secondGroupId = "50000000-0000-4000-8000-000000000002";
+const secondRoleId = "55000000-0000-4000-8000-000000000002";
 
 function household(overrides: Partial<GuestHousehold> = {}): GuestHousehold {
   return {
@@ -108,10 +115,22 @@ function workspaceData(): GuestWorkspaceData {
       sort_order: 0,
       created_at: "2026-01-01T00:00:00.000Z",
       updated_at: "2026-01-01T00:00:00.000Z",
+    }, {
+      id: secondGroupId,
+      wedding_id: weddingId,
+      name: "Friends",
+      sort_order: 1,
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
     }],
     groupMemberships: [{
       wedding_id: weddingId,
       guest_group_id: "50000000-0000-4000-8000-000000000001",
+      guest_id: g1.id,
+      created_at: "2026-01-01T00:00:00.000Z",
+    }, {
+      wedding_id: weddingId,
+      guest_group_id: secondGroupId,
       guest_id: g1.id,
       created_at: "2026-01-01T00:00:00.000Z",
     }],
@@ -119,7 +138,22 @@ function workspaceData(): GuestWorkspaceData {
     allowanceClaims: [],
     householdProgress: [],
     entourage: [],
+    entourageRoles: null,
+    entourageAssignments: null,
     seating: [],
+  };
+}
+
+function entourageRole(id: string, name: string, sortOrder: number, weddingIdValue = weddingId): GuestEntourageRole {
+  return {
+    id,
+    wedding_id: weddingIdValue,
+    name,
+    description: null,
+    sort_order: sortOrder,
+    preset_key: null,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
   };
 }
 
@@ -181,6 +215,7 @@ describe("guest summaries and Household RSVP progress", () => {
 describe("Guest list and cross-Wedding guards", () => {
   it("searches names, contact data, Household context and groups, then combines status and group filters", () => {
     const entries = buildGuestEntries(workspaceData());
+    expect(entries.find((entry) => entry.person.display_name === "Maria Santos")?.groupNames).toEqual(["Family", "Friends"]);
     expect(filterGuestEntries(entries, { search: "maria@example.com", status: "ALL" }).map((entry) => entry.person.display_name)).toEqual(["Maria Santos"]);
     expect(filterGuestEntries(entries, { search: "Santos Family", status: "DECLINED" }).map((entry) => entry.person.display_name)).toEqual(["Ramon Santos"]);
     expect(filterGuestEntries(entries, { search: "Family", status: "ATTENDING", groupId: "50000000-0000-4000-8000-000000000001" }).map((entry) => entry.person.display_name)).toEqual(["Maria Santos"]);
@@ -203,6 +238,40 @@ describe("Guest list and cross-Wedding guards", () => {
     expect(isHouseholdInWedding(foreignHousehold, weddingId)).toBe(false);
     expect(isGuestInWedding(data.guests[0], weddingId)).toBe(true);
     expect(isHouseholdInWedding(data.households[0], weddingId)).toBe(true);
+  });
+
+  it("does not expose a foreign Wedding group through a malformed local membership", () => {
+    const data = workspaceData();
+    data.groups.push({ ...data.groups[0]!, id: "50000000-0000-4000-8000-000000000099", wedding_id: otherWeddingId, name: "Foreign" });
+    data.groupMemberships.push({
+      wedding_id: weddingId,
+      guest_group_id: "50000000-0000-4000-8000-000000000099",
+      guest_id: data.guests[0]!.id,
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    expect(buildGuestEntries(data)[0]?.groupNames).toEqual(["Family", "Friends"]);
+  });
+});
+
+describe("Entourage role presentation and multiple-role membership", () => {
+  it("orders roles by stored sort order and supports the same Guest in multiple roles", () => {
+    const data = workspaceData();
+    const firstRole = entourageRole("55000000-0000-4000-8000-000000000001", "Ceremony Reader", 10);
+    const secondRole = entourageRole(secondRoleId, "Maid of Honor", 20);
+    const foreignRole = entourageRole("55000000-0000-4000-8000-000000000099", "Foreign role", 0, otherWeddingId);
+    data.entourageRoles = [secondRole, firstRole, foreignRole];
+    data.entourageAssignments = [
+      { id: "56000000-0000-4000-8000-000000000001", wedding_id: weddingId, role_id: firstRole.id, guest_id: data.guests[0]!.id, created_at: "2026-01-01T00:00:00.000Z" },
+      { id: "56000000-0000-4000-8000-000000000002", wedding_id: weddingId, role_id: secondRole.id, guest_id: data.guests[0]!.id, created_at: "2026-01-01T00:00:00.000Z" },
+      { id: "56000000-0000-4000-8000-000000000003", wedding_id: otherWeddingId, role_id: foreignRole.id, guest_id: data.guests[0]!.id, created_at: "2026-01-01T00:00:00.000Z" },
+    ];
+    const roleEntries = buildEntourageRoleEntries(data);
+    expect(roleEntries.map((item) => item.role.name)).toEqual(["Ceremony Reader", "Maid of Honor"]);
+    expect(roleEntries.map((item) => item.guests.map((entry) => entry.person.display_name))).toEqual([
+      ["Maria Santos"],
+      ["Maria Santos"],
+    ]);
+    expect(buildEntourageRoleEntries(data, otherWeddingId)).toEqual([]);
   });
 });
 
@@ -228,6 +297,17 @@ describe("guest permissions and form validation", () => {
     expect(guestAllowanceLabel("CHILD")).toBe("Child");
   });
 
+  it("validates group and entourage names plus the distinct allowance sponsor rules and positive capacity", () => {
+    expect(guestGroupDraftSchema.parse({ name: "  Friends  " })).toEqual({ name: "Friends" });
+    expect(entourageRoleDraftSchema.parse({ name: "  Ceremony Reader  ", description: "  Reads the program  " })).toEqual({ name: "Ceremony Reader", description: "Reads the program" });
+    expect(guestAllowanceDraftSchema.safeParse({ householdId, allowanceType: "PLUS_ONE", sponsorGuestId: null, maxCount: 1 }).success).toBe(false);
+    expect(guestAllowanceDraftSchema.parse({ householdId, allowanceType: "PLUS_ONE", sponsorGuestId: "guest-in-household", maxCount: 1 })).toMatchObject({ sponsorGuestId: "guest-in-household" });
+    expect(guestAllowanceDraftSchema.parse({ householdId, allowanceType: "CHILD", sponsorGuestId: null, maxCount: 2 })).toMatchObject({ sponsorGuestId: null });
+    expect(guestAllowanceDraftSchema.safeParse({ householdId, allowanceType: "CHILD", sponsorGuestId: "guest-in-household", maxCount: 1 }).success).toBe(false);
+    expect(guestAllowanceDraftSchema.safeParse({ householdId, allowanceType: "CHILD", sponsorGuestId: null, maxCount: 0 }).success).toBe(false);
+    expect(guestAllowanceDraftSchema.safeParse({ householdId, allowanceType: "CHILD", sponsorGuestId: null, maxCount: 32768 }).success).toBe(false);
+  });
+
   it("prevents duplicate submits and hides raw database errors", async () => {
     const gate = new SingleSubmitGate();
     let finish: (() => void) | undefined;
@@ -241,6 +321,7 @@ describe("guest permissions and form validation", () => {
     finish?.();
     await expect(first).resolves.toBe("saved");
     expect(safeGuestError({ code: "42501", message: "private database details" })).toContain("permission");
+    expect(safeGuestError({ code: "23514", constraint: "guest_allowance_claims_capacity_check", message: "private database details" })).toContain("full");
     expect(safeGuestError({ code: "XX000", message: "private database details" })).toBe("We couldn't save this guest change. Try again.");
   });
 });

@@ -33,6 +33,39 @@ export function GuestFilterChip({
   );
 }
 
+export function GuestSectionNavigation({
+  active,
+  onGuestsPress,
+  onEntouragePress,
+}: {
+  active: "GUESTS" | "ENTOURAGE";
+  onGuestsPress?: () => void;
+  onEntouragePress?: () => void;
+}) {
+  return (
+    <View style={styles.sectionNavigation} accessibilityRole="tablist">
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={{ selected: active === "GUESTS", disabled: active === "GUESTS" }}
+        disabled={active === "GUESTS"}
+        onPress={onGuestsPress}
+        style={[styles.sectionTab, active === "GUESTS" && styles.sectionTabActive]}
+      >
+        <KatipanText variant="labelLarge" color={active === "GUESTS" ? "primary" : "textMuted"}>All Guests</KatipanText>
+      </Pressable>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={{ selected: active === "ENTOURAGE", disabled: active === "ENTOURAGE" }}
+        disabled={active === "ENTOURAGE"}
+        onPress={onEntouragePress}
+        style={[styles.sectionTab, active === "ENTOURAGE" && styles.sectionTabActive]}
+      >
+        <KatipanText variant="labelLarge" color={active === "ENTOURAGE" ? "primary" : "textMuted"}>Entourage</KatipanText>
+      </Pressable>
+    </View>
+  );
+}
+
 export function GuestRow({ entry, onPress }: { entry: GuestEntry; onPress: () => void }) {
   const status = guestRsvpStatus(entry.rsvp);
   return (
@@ -99,6 +132,16 @@ export function InfoLine({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  sectionNavigation: {
+    minHeight: 52,
+    flexDirection: "row",
+    gap: s.micro,
+    padding: s.micro,
+    borderRadius: r.pill,
+    backgroundColor: c.surfaceLow,
+  },
+  sectionTab: { flex: 1, minHeight: 42, alignItems: "center", justifyContent: "center", paddingHorizontal: s.small, borderRadius: r.pill },
+  sectionTabActive: { backgroundColor: c.cardIvory, borderWidth: 1, borderColor: c.stoneBorder, shadowColor: c.text, shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   filterChip: {
     minHeight: 40,
     alignItems: "center",
