@@ -5,9 +5,9 @@ import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipa
 import { calendarDateToIso, formatWeddingDate, parseCalendarDate } from "./model";
 import { KatipanText } from "../ui";
 
-type Props = { date: string; disabled: boolean; onChange: (date: string) => void };
+type Props = { date: string; disabled: boolean; onChange: (date: string) => void; label?: string };
 
-export default function WeddingDateField({ date, disabled, onChange }: Props) {
+export default function WeddingDateField({ date, disabled, onChange, label = "Chosen date" }: Props) {
   const [open, setOpen] = useState(false);
   const [iosDate, setIosDate] = useState(() => parseCalendarDate(date) ?? new Date());
   const selected = parseCalendarDate(date) ?? new Date();
@@ -21,22 +21,22 @@ export default function WeddingDateField({ date, disabled, onChange }: Props) {
   return <>
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={date ? `Wedding date, ${formatWeddingDate(date)}` : "Choose wedding date"}
+      accessibilityLabel={date ? label + ", " + formatWeddingDate(date) : "Choose " + label.toLowerCase()}
       accessibilityHint="Opens the date picker"
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={() => { setIosDate(selected); setOpen(true); }}
       style={[styles.field, disabled && styles.disabled]}
     >
-      <KatipanText variant="label" color="textMuted">Chosen date</KatipanText>
+      <KatipanText variant="label" color="textMuted">{label}</KatipanText>
       <KatipanText>{date ? formatWeddingDate(date) : "Choose a date"}</KatipanText>
     </Pressable>
-    {open && Platform.OS === "android" && <DateTimePicker value={selected} mode="date" display="default" onChange={handleChange} accessibilityLabel="Wedding date" />}
+    {open && Platform.OS === "android" && <DateTimePicker value={selected} mode="date" display="default" onChange={handleChange} accessibilityLabel={label} />}
     {Platform.OS === "ios" && <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
       <Pressable accessibilityRole="button" accessibilityLabel="Close date picker" style={styles.scrim} onPress={() => setOpen(false)} />
       <View style={styles.sheet}>
         <View style={styles.actions}><Pressable accessibilityRole="button" accessibilityLabel="Cancel date selection" onPress={() => setOpen(false)} style={styles.action}><KatipanText color="textMuted">Cancel</KatipanText></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Done selecting wedding date" onPress={() => { onChange(calendarDateToIso(iosDate)); setOpen(false); }} style={styles.action}><KatipanText color="primary">Done</KatipanText></Pressable></View>
-        <DateTimePicker value={iosDate} mode="date" display="spinner" onChange={(event, value) => { if (event.type === "set" && value) setIosDate(value); }} accessibilityLabel="Wedding date" />
+        <DateTimePicker value={iosDate} mode="date" display="spinner" onChange={(event, value) => { if (event.type === "set" && value) setIosDate(value); }} accessibilityLabel={label} />
       </View>
     </Modal>}
   </>;
