@@ -12,9 +12,9 @@ describe("couple onboarding", () => {
 
   it("validates required input and maps only the approved RPC arguments", () => {
     expect(weddingDraftSchema.safeParse(emptyDraft).success).toBe(false);
-    const draft = { ...emptyDraft, currentName: "  Pat  ", partnerName: "  Anna ", weddingName: " Our Day ", date: "2027-12-18", location: " Antipolo ", guestCount: 125, ceremonyStyle: "CIVIL" as const, targetBudget: "600000" };
+    const draft = { ...emptyDraft, currentName: "  Juan  ", partnerName: "  Maria ", weddingName: " Our Day ", date: "2027-12-18", location: " Antipolo ", guestCount: 125, ceremonyStyle: "CIVIL" as const, targetBudget: "600000" };
     expect(weddingRpcArgs(draft)).toEqual({
-      p_wedding_display_name: "Our Day", p_current_partner_display_name: "Pat", p_second_partner_display_name: "Anna",
+      p_wedding_display_name: "Our Day", p_current_partner_display_name: "Juan", p_second_partner_display_name: "Maria",
       p_wedding_date: "2027-12-18", p_timezone: "Asia/Manila", p_general_location: "Antipolo",
       p_estimated_guest_count: 125, p_ceremony_style: "CIVIL",
     });
@@ -36,7 +36,7 @@ describe("couple onboarding", () => {
 
   it("clears and ignores the date when the couple has not chosen one", () => {
     expect(weddingDateForSubmit("2027-05-16", true)).toBe("");
-    expect(weddingRpcArgs({ ...emptyDraft, weddingName: "Our Day", currentName: "Pat", date: weddingDateForSubmit("2027-05-16", true) }).p_wedding_date).toBeUndefined();
+    expect(weddingRpcArgs({ ...emptyDraft, weddingName: "Our Day", currentName: "Juan", date: weddingDateForSubmit("2027-05-16", true) }).p_wedding_date).toBeUndefined();
     expect(weddingDateForSubmit("2027-05-16", false)).toBe("2027-05-16");
   });
 
