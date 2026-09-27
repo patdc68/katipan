@@ -13,5 +13,10 @@ const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const key = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 export const hasSupabaseConfig = Boolean(url && key);
 export const supabase = createClient<Database>(url || "https://placeholder.invalid", key || "missing-publishable-key", {
-  auth: { storage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+  auth: { storage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false, flowType: "pkce" },
 });
+
+export function getAuthRedirectUrl() {
+  if (Platform.OS === "web" && typeof window !== "undefined") return new URL("/auth/callback", window.location.origin).toString();
+  return "katipan://auth/callback";
+}

@@ -22,6 +22,32 @@ export const weddingDraftSchema = z.object({
 export type WeddingDraft = z.infer<typeof weddingDraftSchema>;
 export const emptyDraft: WeddingDraft = { currentName: "", partnerName: "", weddingName: "", date: "", location: "", guestCount: null, ceremonyStyle: "UNDECIDED", targetBudget: "" };
 
+export function parseCalendarDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]); const month = Number(match[2]); const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? date : null;
+}
+
+export function calendarDateToIso(date: Date): string {
+  const year = date.getFullYear().toString().padStart(4, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function formatWeddingDate(value: string, locale?: string): string {
+  const date = parseCalendarDate(value);
+  if (!date) return "";
+  const stableCalendarDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12));
+  return new Intl.DateTimeFormat(locale, { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(stableCalendarDate);
+}
+
+export function weddingDateForSubmit(date: string, noDateChosen: boolean): string {
+  return noDateChosen ? "" : date;
+}
+
 export function weddingRpcArgs(draft: WeddingDraft) {
   const value = weddingDraftSchema.parse(draft);
   return {

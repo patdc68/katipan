@@ -5,7 +5,7 @@ import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipa
 import { KatipanButton, KatipanScreen, KatipanText, EditorialCard, FormField } from "../../ui";
 import { artwork, EditorialImage, OnboardingHeader } from "../../onboarding/components";
 import { useAccess } from "../../onboarding/provider";
-import { saveMotif } from "../../onboarding/api";
+import { MotifPersistenceError, saveMotif } from "../../onboarding/api";
 import { SingleFlight } from "../../onboarding/model";
 
 const palettes = [
@@ -29,7 +29,10 @@ export default function MotifComplete() {
     if (new Set(chosen.colors).size !== chosen.colors.length || chosen.colors.some(color => !/^#[0-9A-F]{6}$/.test(color))) { setError("Use 3–5 distinct colors in #RRGGBB format."); return; }
     busyRef.current = true; setBusy(true); setError("");
     try { await flight.current.run(async () => { await saveMotif(wedding.weddingId, chosen.title, chosen.colors); finishMotif(); router.replace("/(access)/invite-partner"); }); }
-    catch { setError("We couldn’t save your wedding colors. Check your connection and try again."); }
+    catch (caught) {
+      if (__DEV__ && caught instanceof MotifPersistenceError) setError(`We couldn’t save your wedding colors (${caught.stage}). Check your connection and try again.`);
+      else setError("We couldn’t save your wedding colors. Check your connection and try again.");
+    }
     finally { busyRef.current = false; setBusy(false); }
   }
   const names = [draft.currentName, draft.partnerName].filter(Boolean).join(" & ") || "Your wedding";

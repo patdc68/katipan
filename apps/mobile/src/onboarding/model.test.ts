@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { allowedRoute, emptyDraft, InvitationGate, SingleFlight, weddingDraftSchema, weddingRpcArgs } from "./model";
+import { allowedRoute, calendarDateToIso, emptyDraft, formatWeddingDate, InvitationGate, parseCalendarDate, SingleFlight, weddingDateForSubmit, weddingDraftSchema, weddingRpcArgs } from "./model";
 
 describe("couple onboarding", () => {
   it("protects unauthenticated routes and redirects existing owners away from creation", () => {
@@ -21,6 +21,23 @@ describe("couple onboarding", () => {
     expect(weddingDraftSchema.safeParse({ ...draft, date: "tomorrow" }).success).toBe(false);
     expect(weddingDraftSchema.safeParse({ ...draft, date: "2027-02-31" }).success).toBe(false);
     expect(weddingDraftSchema.safeParse({ ...draft, guestCount: -1 }).success).toBe(false);
+  });
+
+  it("stores a native calendar selection as canonical YYYY-MM-DD", () => {
+    expect(calendarDateToIso(new Date(2027, 4, 16, 23, 45))).toBe("2027-05-16");
+    expect(parseCalendarDate("2027-05-16")?.getDate()).toBe(16);
+    expect(parseCalendarDate("2027-02-31")).toBeNull();
+  });
+
+  it("formats a friendly date without shifting the selected calendar day", () => {
+    expect(formatWeddingDate("2027-05-16", "en-US")).toBe("May 16, 2027");
+    expect(calendarDateToIso(parseCalendarDate("2027-05-16")!)).toBe("2027-05-16");
+  });
+
+  it("clears and ignores the date when the couple has not chosen one", () => {
+    expect(weddingDateForSubmit("2027-05-16", true)).toBe("");
+    expect(weddingRpcArgs({ ...emptyDraft, weddingName: "Our Day", currentName: "Pat", date: weddingDateForSubmit("2027-05-16", true) }).p_wedding_date).toBeUndefined();
+    expect(weddingDateForSubmit("2027-05-16", false)).toBe("2027-05-16");
   });
 
   it("coalesces double submits and permits a retry after an error", async () => {

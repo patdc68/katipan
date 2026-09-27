@@ -4,6 +4,7 @@ import { View, StyleSheet } from "react-native";
 import { colorTokens as c, spacingTokens as s } from "@katipan/ui";
 import { z } from "zod";
 import { supabase, hasSupabaseConfig } from "../../auth/client";
+import { signUpWithEmail } from "../../auth/email";
 import { KatipanScreen, KatipanText, KatipanButton, FormField } from "../../ui";
 import { artwork, Brand, EditorialImage } from "../../onboarding/components";
 
@@ -20,10 +21,10 @@ export default function Auth() {
     if (!valid.success) { setError(valid.error.issues[0]?.message ?? "Check your details."); return; }
     setBusy(true); setError(""); setSuccess("");
     try {
-      const result = mode === "signup" ? await supabase.auth.signUp(valid.data) : await supabase.auth.signInWithPassword(valid.data);
+      const result = mode === "signup" ? await signUpWithEmail(valid.data.email, valid.data.password) : await supabase.auth.signInWithPassword(valid.data);
       if (result.error) throw result.error;
       if (result.data.session) router.replace("/(access)/create-wedding");
-      else setSuccess("Check your email to confirm your account, then sign in.");
+      else setSuccess("Check your email and tap the confirmation link to continue in Katipan.");
     } catch { setError("We couldn't sign you in. Check your email and password, then try again."); }
     finally { setBusy(false); }
   }

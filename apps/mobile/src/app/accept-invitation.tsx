@@ -5,6 +5,7 @@ import { KatipanButton, KatipanScreen, KatipanText, FormField } from "../ui";
 import { artwork, Brand, EditorialImage } from "../onboarding/components";
 import { useAccess } from "../onboarding/provider";
 import { supabase } from "../auth/client";
+import { signUpWithEmail } from "../auth/email";
 
 const credentials = z.object({ email: z.email(), password: z.string().min(8) });
 export default function AcceptInvitation() {
@@ -20,7 +21,7 @@ export default function AcceptInvitation() {
     if (!parsed.success) { setError("Enter a valid email and a password of at least 8 characters."); return; }
     busyRef.current = true; setBusy(true); setError("");
     try {
-      const result = mode === "signup" ? await supabase.auth.signUp(parsed.data) : await supabase.auth.signInWithPassword(parsed.data);
+      const result = mode === "signup" ? await signUpWithEmail(parsed.data.email, parsed.data.password) : await supabase.auth.signInWithPassword(parsed.data);
       if (result.error) throw result.error;
       if (!result.data.session) setMessage("Check your email to confirm your account, then reopen the invitation link.");
     } catch { setError("We couldn’t sign you in. Check your details and try again."); }

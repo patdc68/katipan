@@ -8,13 +8,28 @@ export async function createCoupleWedding(draft: WeddingDraft): Promise<CreatedW
   return { weddingId: row.wedding_id, currentPersonId: row.current_person_id, secondPartnerPersonId: row.second_partner_person_id };
 }
 
+export type MotifSaveStage = "load_motif" | "insert_motif" | "update_motif_title" | "remove_colors" | "insert_colors";
+export class MotifPersistenceError extends Error {
+  constructor(readonly stage: MotifSaveStage) { super("Motif persistence failed."); this.name = "MotifPersistenceError"; }
+}
+
 export async function saveMotif(weddingId: string, title: string, colors: readonly string[]) {
-  const { data: motif, error } = await supabase.from("wedding_motifs").upsert({ wedding_id: weddingId, title }, { onConflict: "wedding_id" }).select("id").single();
-  if (error || !motif) throw error ?? new Error("Missing motif result");
-  const { error: removeError } = await supabase.from("motif_colors").delete().eq("wedding_id", weddingId).eq("motif_id", motif.id);
-  if (removeError) throw removeError;
-  const { error: addError } = await supabase.from("motif_colors").insert(colors.map((color_hex, sort_order) => ({ wedding_id: weddingId, motif_id: motif.id, color_hex, sort_order })));
-  if (addError) throw addError;
+  const existing = await supabase.from("wedding_motifs").select("id").eq("wedding_id", weddingId).maybeSingle();
+  if (existing.error) throw new MotifPersistenceError("load_motif");
+  let motifId = existing.data?.id;
+  if (motifId) {
+    const updated = await supabase.from("wedding_motifs").update({ title }).eq("wedding_id", weddingId).select("id").single();
+    if (updated.error || !updated.data) throw new MotifPersistenceError("update_motif_title");
+    motifId = updated.data.id;
+  } else {
+    const inserted = await supabase.from("wedding_motifs").insert({ wedding_id: weddingId, title }).select("id").single();
+    if (inserted.error || !inserted.data) throw new MotifPersistenceError("insert_motif");
+    motifId = inserted.data.id;
+  }
+  const removed = await supabase.from("motif_colors").delete().eq("wedding_id", weddingId).eq("motif_id", motifId);
+  if (removed.error) throw new MotifPersistenceError("remove_colors");
+  const inserted = await supabase.from("motif_colors").insert(colors.map((color_hex, sort_order) => ({ wedding_id: weddingId, motif_id: motifId, color_hex, sort_order })));
+  if (inserted.error) throw new MotifPersistenceError("insert_colors");
 }
 
 export async function issuePartnerInvitation(wedding: CreatedWedding, email: string) {
