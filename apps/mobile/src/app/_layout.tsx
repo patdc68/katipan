@@ -3,6 +3,7 @@ import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccessProvider } from "../onboarding/provider";
+import { WorkspaceProvider } from "../workspace/context";
 import {
   PlayfairDisplay_400Regular,
   PlayfairDisplay_500Medium,
@@ -33,7 +34,9 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AccessProvider><Stack screenOptions={{ headerShown: false }} /></AccessProvider>
+      <AccessProvider>
+        <WorkspaceProvider><Stack screenOptions={{ headerShown: false }} /></WorkspaceProvider>
+      </AccessProvider>
       <StatusBar style="dark" />
     </SafeAreaProvider>
   );
