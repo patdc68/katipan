@@ -1,10 +1,12 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { colorTokens, spacingTokens } from "@katipan/ui";
+import { KatipanText } from "../ui";
 
 export default function HomeScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>KATIPAN</Text>
-      <Text style={styles.subtitle}>Mobile foundation ready.</Text>
+      <KatipanText variant="headlineLarge">KATIPAN</KatipanText>
+      <KatipanText variant="body" color="textMuted">Mobile foundation ready.</KatipanText>
     </View>
   );
 }
@@ -12,20 +14,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    backgroundColor: "#fffaf7",
+    backgroundColor: colorTokens.background,
     flex: 1,
     justifyContent: "center",
-    padding: 24,
-  },
-  title: {
-    color: "#4c1d2f",
-    fontSize: 32,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
-  subtitle: {
-    color: "#6b5560",
-    fontSize: 16,
-    marginTop: 12,
+    padding: spacingTokens.large,
+    gap: spacingTokens.medium,
   },
 });
