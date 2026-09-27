@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AccessProvider } from "../onboarding/provider";
 import {
   PlayfairDisplay_400Regular,
   PlayfairDisplay_500Medium,
@@ -32,7 +33,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }} />
+      <AccessProvider><Stack screenOptions={{ headerShown: false }} /></AccessProvider>
       <StatusBar style="dark" />
     </SafeAreaProvider>
   );

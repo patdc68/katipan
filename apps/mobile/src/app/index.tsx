@@ -1,23 +1,11 @@
-import { StyleSheet, View } from "react-native";
-import { colorTokens, spacingTokens } from "@katipan/ui";
-import { KatipanText } from "../ui";
+import { Redirect } from "expo-router";
+import { LoadingState } from "../ui";
+import { useAccess } from "../onboarding/provider";
 
-export default function HomeScreen() {
-  return (
-    <View style={styles.container}>
-      <KatipanText variant="headlineLarge">KATIPAN</KatipanText>
-      <KatipanText variant="body" color="textMuted">Mobile foundation ready.</KatipanText>
-    </View>
-  );
+export default function Index() {
+  const { loading, session, stage, motifDone } = useAccess();
+  if (loading) return <LoadingState label="Restoring your wedding…" />;
+  if (!session) return <Redirect href="/(access)/welcome" />;
+  if (stage === "created") return <Redirect href={motifDone ? "/(access)/invite-partner" : "/(access)/motif-complete"} />;
+  return <Redirect href={stage === "details" ? "/(access)/wedding-details" : "/(access)/create-wedding"} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    backgroundColor: colorTokens.background,
-    flex: 1,
-    justifyContent: "center",
-    padding: spacingTokens.large,
-    gap: spacingTokens.medium,
-  },
-});

@@ -211,8 +211,8 @@ export function ErrorState({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colorTokens.background },
-  screenContent: { flexGrow: 1, gap: spacingTokens.large },
+  screen: { flex: 1, width: "100%", backgroundColor: colorTokens.background },
+  screenContent: { flexGrow: 1, width: "100%", minWidth: 0, gap: spacingTokens.large },
   padded: { paddingHorizontal: spacingTokens.margin, paddingVertical: spacingTokens.large },
   button: {
     minHeight: 48, paddingHorizontal: spacingTokens.large, paddingVertical: spacingTokens.small,
