@@ -6,7 +6,7 @@ import { artwork, Brand, EditorialImage } from "../onboarding/components";
 import { useAccess } from "../onboarding/provider";
 import { supabase } from "../auth/client";
 import { signUpWithEmail } from "../auth/email";
-import { acceptWeddingInvitation } from "../workspace/api";
+import { acceptInvitation } from "../workspace/api";
 import { useWorkspace } from "../workspace/context";
 import { safeInvitationFailure } from "../workspace/model";
 
@@ -49,7 +49,8 @@ export default function AcceptInvitation() {
     if (busyRef.current || !session || !token || !/^[0-9a-f]{64}$/.test(token)) return;
     busyRef.current = true; setBusy(true); setError("");
     try {
-      const accepted = await acceptWeddingInvitation(token);
+      const result = await acceptInvitation(token);
+      const accepted = result.invitation;
       try {
         await workspace.refreshMemberships(accepted.wedding_id);
       } catch {
@@ -69,12 +70,12 @@ export default function AcceptInvitation() {
     <KatipanScreen contentContainerStyle={{ gap: 20 }}>
       <Brand />
       <EditorialImage source={artwork.invite} height={210} />
-      <KatipanText variant="headlineMobile" accessibilityRole="header">Join your Katipan.</KatipanText>
+      <KatipanText variant="headlineMobile" accessibilityRole="header">Join the Wedding on Katipan.</KatipanText>
       {!token || !/^[0-9a-f]{64}$/.test(token) ? (
         <KatipanText color="error">This invitation link is not valid. Ask the sender for a fresh link.</KatipanText>
       ) : session ? (
         <>
-          <KatipanText color="textMuted">Accept the invitation to join the existing Wedding and Person record. Use the account invited by your partner.</KatipanText>
+          <KatipanText color="textMuted">Accept this invitation to join the existing Wedding with the access set by the sender. Use the account invited for this link.</KatipanText>
           <KatipanButton label="Accept Invitation" loading={busy} onPress={() => void accept()} />
         </>
       ) : (

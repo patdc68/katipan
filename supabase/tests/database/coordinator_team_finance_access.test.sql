@@ -93,10 +93,26 @@ select extensions.is(
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000603',true);
+select extensions.throws_ok(
+  format('select * from public.accept_wedding_invitation(%L)',
+    (select raw_token from team_tokens where label = 'full')),
+  '22023', 'Invitation cannot be accepted.', 'Partner Owner RPC rejects a Coordinator invitation generically');
+set local role postgres;
+select extensions.is(
+  (select count(*) from public.wedding_memberships
+    where wedding_id = '10000000-0000-0000-0000-000000000601'
+      and user_id = '00000000-0000-0000-0000-000000000603' and status = 'ACTIVE'),
+  0::bigint, 'Wrong Coordinator dispatch does not activate a membership');
+select extensions.is(
+  (select status::text from public.wedding_invitations
+    where id = (select invitation_id from team_tokens where label = 'full')),
+  'PENDING', 'Wrong Coordinator dispatch does not consume the invitation');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000603',true);
 select extensions.is(
   (select membership_role::text from public.accept_coordinator_invitation(
     (select raw_token from team_tokens where label = 'full'))),
-  'FULL_COORDINATOR', 'Owner invitation accepts Full Coordinator');
+  'FULL_COORDINATOR', 'Coordinator invitation accepts Full Coordinator');
 select extensions.throws_ok(
   format('select * from public.accept_coordinator_invitation(%L)',
     (select raw_token from team_tokens where label = 'full')),

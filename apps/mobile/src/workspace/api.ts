@@ -1,5 +1,5 @@
 import { supabase } from "../auth/client";
-import type { WorkspaceMembership, WorkspaceWedding } from "./model";
+import type { WorkspaceMembership, WorkspaceRole, WorkspaceWedding } from "./model";
 
 export async function loadActiveMemberships(userId: string): Promise<WorkspaceMembership[]> {
   const { data: membershipRows, error: membershipError } = await supabase
@@ -16,7 +16,7 @@ export async function loadActiveMemberships(userId: string): Promise<WorkspaceMe
 
   const [weddingResult, partnerResult] = await Promise.all([
     supabase.from("weddings")
-      .select("id,display_name,wedding_date,general_location,status,origin,ownership_mode")
+      .select("id,created_by_user_id,display_name,wedding_date,general_location,status,origin,ownership_mode")
       .in("id", weddingIds),
     supabase.from("wedding_partners")
       .select("wedding_id,partner_order,wedding_people!wedding_partners_person_same_wedding_fkey(display_name)")
@@ -62,6 +62,17 @@ export type AcceptedWeddingInvitation = {
   already_accepted: boolean;
 };
 
+export type AcceptedCoordinatorInvitation = {
+  invitation_id: string;
+  wedding_id: string;
+  membership_id: string;
+  membership_role: WorkspaceRole;
+};
+
+export type AcceptedInvitation =
+  | { kind: "PARTNER_OWNER"; invitation: AcceptedWeddingInvitation }
+  | { kind: "COORDINATOR"; invitation: AcceptedCoordinatorInvitation };
+
 export class WeddingInvitationAcceptanceError extends Error {
   readonly code: string | undefined;
   constructor(code?: string) {
@@ -78,4 +89,28 @@ export async function acceptWeddingInvitation(rawToken: string): Promise<Accepte
   const accepted = data?.[0];
   if (!accepted) throw new WeddingInvitationAcceptanceError();
   return accepted;
+}
+
+export async function acceptCoordinatorInvitation(rawToken: string): Promise<AcceptedCoordinatorInvitation> {
+  if (!/^[0-9a-f]{64}$/.test(rawToken)) throw new Error("Invalid invitation link.");
+  const { data, error } = await supabase.rpc("accept_coordinator_invitation", { p_raw_token: rawToken });
+  if (error) throw new WeddingInvitationAcceptanceError(error.code);
+  const accepted = data?.[0];
+  if (!accepted) throw new WeddingInvitationAcceptanceError();
+  return accepted;
+}
+
+/**
+ * Uses the two transaction-safe acceptance RPCs as a private dispatch boundary.
+ * Both reject tokens of the other invitation shape with SQLSTATE 22023 before
+ * committing any writes; all other errors stop dispatch to avoid retrying an
+ * operation whose server outcome may be uncertain.
+ */
+export async function acceptInvitation(rawToken: string): Promise<AcceptedInvitation> {
+  try {
+    return { kind: "PARTNER_OWNER", invitation: await acceptWeddingInvitation(rawToken) };
+  } catch (error) {
+    if (!(error instanceof WeddingInvitationAcceptanceError) || error.code !== "22023") throw error;
+  }
+  return { kind: "COORDINATOR", invitation: await acceptCoordinatorInvitation(rawToken) };
 }

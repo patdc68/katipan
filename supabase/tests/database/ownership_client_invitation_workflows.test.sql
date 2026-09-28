@@ -478,6 +478,34 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000104', true);
 
 select extensions.throws_ok(
+  pg_catalog.format(
+    'select * from public.accept_coordinator_invitation(%L)',
+    (select state.raw_token from invitation_state as state where state.label = 'carlo_valid')
+  ),
+  '22023',
+  'Invitation cannot be accepted.',
+  'Coordinator RPC rejects a Partner Owner invitation generically'
+);
+
+set local role postgres;
+select extensions.is(
+  (select count(*) from public.wedding_memberships
+    where wedding_id = (select state.wedding_id from workflow_state as state where state.label = 'coordinator')
+      and user_id = '00000000-0000-0000-0000-000000000104' and status = 'ACTIVE'),
+  0::bigint,
+  'Wrong Partner dispatch does not activate a Coordinator membership'
+);
+select extensions.is(
+  (select status::text from public.wedding_invitations
+    where id = (select state.invitation_id from invitation_state as state where state.label = 'carlo_valid')),
+  'PENDING',
+  'Wrong Partner dispatch leaves its invitation pending'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000104', true);
+
+select extensions.throws_ok(
   $$select * from public.accept_wedding_invitation('ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')$$,
   '22023',
   'Invitation cannot be accepted.',

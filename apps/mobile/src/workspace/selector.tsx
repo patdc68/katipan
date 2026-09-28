@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipan/ui";
 import {
   EditorialCard, EmptyState, ErrorState, KatipanButton,
@@ -8,7 +8,7 @@ import {
 } from "../ui";
 import { Brand, ChoiceChip } from "../onboarding/components";
 import { useWorkspace } from "./context";
-import { roleLabel, weddingStatusLabel, type WorkspaceMembership } from "./model";
+import { ownershipModeLabel, roleLabel, weddingStatusLabel, type WorkspaceMembership } from "./model";
 import { formatWeddingDate, localCalendarDate, weddingDisplayName } from "./presentation";
 
 type Filter = "ALL" | "UPCOMING" | "PAST";
@@ -32,7 +32,7 @@ function WeddingCard({ membership, busy, onOpen }: {
   const { wedding, partnerNames } = membership;
   const title = weddingDisplayName(partnerNames, wedding.display_name);
   const date = formatWeddingDate(wedding.wedding_date);
-  const originLabel = wedding.origin === "COORDINATOR_CREATED" ? "Coordinator-created" : "Couple-created";
+  const originLabel = wedding.origin === "COORDINATOR_CREATED" ? "Client Wedding" : "Couple-created";
   return (
     <Pressable
       accessibilityRole="button"
@@ -47,6 +47,7 @@ function WeddingCard({ membership, busy, onOpen }: {
         <View style={styles.cardTags}>
           <StatusChip label={originLabel} tone="neutral" />
           <StatusChip label={roleLabel(membership.role)} tone={membership.role === "OWNER" ? "success" : "neutral"} />
+          <StatusChip label={ownershipModeLabel(wedding)} tone="neutral" />
         </View>
         <KatipanText variant="headlineMedium" accessibilityRole="header">{title}</KatipanText>
         {wedding.display_name && partnerNames.length > 0 && wedding.display_name !== title && (
@@ -99,8 +100,11 @@ export function WeddingsSelector() {
     setOpeningId(weddingId);
     setLocalError("");
     try {
-      await workspace.activateWedding(weddingId);
-      router.replace({ pathname: "/(wedding)/[weddingId]/home", params: { weddingId } });
+      const membership = await workspace.activateWedding(weddingId);
+      const route = membership.role === "FULL_COORDINATOR" && membership.wedding.origin === "COORDINATOR_CREATED"
+        ? "/(coordinator)/[weddingId]/overview"
+        : "/(wedding)/[weddingId]/home";
+      router.replace({ pathname: route, params: { weddingId } } as unknown as Href);
     } catch {
       setLocalError("This Wedding workspace is no longer available. Refresh your memberships and try again.");
       setOpeningId(null);
@@ -121,11 +125,13 @@ export function WeddingsSelector() {
         <KatipanText color="textMuted">Choose a Wedding workspace to continue.</KatipanText>
       </View>
 
+      <KatipanButton label="Create a Client Wedding" variant="secondary" onPress={() => router.push("/(coordinator)/onboarding" as unknown as Href)} />
+
       {workspace.memberships.length === 0 ? (
         <EmptyState
           title="No active Wedding memberships"
-          description="Create a Wedding or reopen an invitation you have received."
-          action={<KatipanButton label="Create a Wedding" onPress={() => router.replace("/(access)/create-wedding")} />}
+          description="Create a Wedding of your own, start a client Wedding, or reopen an invitation you have received."
+          action={<KatipanButton label="Create our Wedding" onPress={() => router.replace("/(access)/create-wedding")} />}
         />
       ) : <>
         <View style={styles.metrics}>

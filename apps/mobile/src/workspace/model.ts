@@ -7,6 +7,7 @@ export type WeddingOwnershipMode = Database["public"]["Enums"]["wedding_ownershi
 
 export type WorkspaceWedding = {
   id: string;
+  created_by_user_id?: string | null;
   display_name: string | null;
   wedding_date: string | null;
   general_location: string | null;
@@ -84,6 +85,15 @@ export function roleLabel(role: WorkspaceRole): string {
     case "DAY_OF_COORDINATOR": return "Day-of Coordinator";
     case "GUEST_COORDINATOR": return "Guest Coordinator";
   }
+}
+
+export function ownershipModeLabel(wedding: Pick<WorkspaceWedding, "origin" | "ownership_mode">): string {
+  if (wedding.origin === "COORDINATOR_CREATED") {
+    return wedding.ownership_mode === "COORDINATOR_MANAGED"
+      ? "Coordinator-managed"
+      : "Couple-owned";
+  }
+  return "Couple-owned";
 }
 
 export function weddingStatusLabel(status: WeddingStatus): string {
