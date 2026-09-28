@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { loadGuestGuide, type GuestGuide, type GuideColor, type GuideSection } from "../../../lib/guest-guide";
+import { guestRouteHref, isHouseholdInvitationToken } from "../../../lib/guest-rsvp";
+import { GuestRsvpSection } from "./guest-rsvp-section";
+import { GuestRouteNav } from "./guest-route-nav";
 import "./guide.css";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +26,8 @@ function Swatches({ title, colors }: { title: string; colors: GuideColor[] }) {
     <span className="guide-swatch-dot" style={{ backgroundColor: color.hex }} aria-hidden="true" />{color.name || color.hex}
   </span>)}</div></div>;
 }
-function Section({ section }: { section: GuideSection }) {
-  if (section.type === "RSVP") return <section className="guide-card" id={section.key}>
-    <p className="guide-eyebrow">YOUR INVITATION</p><h2>RSVP</h2>
-    {section.rsvps.length ? <ul className="guide-plain-list">{section.rsvps.map((guest, index) => <li key={`${guest.name}-${index}`}>{guest.name} · {guest.status.replaceAll("_", " ").toLowerCase()}</li>)}</ul>
-      : <p>RSVP details will appear here when available.</p>}
-    <p className="guide-muted">Response editing will be available in a separate RSVP experience.</p>
-  </section>;
+function Section({ section, slug, token }: { section: GuideSection; slug: string; token: string | null }) {
+  if (section.type === "RSVP") return <GuestRsvpSection section={section} slug={slug} token={token} />;
   if (section.type === "PLACES") return <section className="guide-card" id={section.key}>
     <p className="guide-eyebrow">FIND YOUR WAY</p><h2>Wedding Places</h2>
     {section.places.length ? <div className="guide-place-list">{section.places.map((place, index) => <article className="guide-place" key={`${place.name}-${index}`}>
@@ -63,7 +61,9 @@ function Message({ title, description }: { title: string; description: string })
   </section></div></main>;
 }
 function Guide({ guide, token }: { guide: GuestGuide; token: string | null }) {
-  const passHref = token ? `/w/${encodeURIComponent(guide.slug)}/pass?token=${encodeURIComponent(token)}` : null;
+  const authorizedHousehold = isHouseholdInvitationToken(token);
+  const passHref = authorizedHousehold ? guestRouteHref(guide.slug, "/pass", token) : null;
+  const hasRsvpSection = guide.sections.some(section => section.type === "RSVP");
   return <main className={`guide-page guide-template-${guide.template.toLowerCase().replaceAll("_", "-")}`}>
     <div className="guide-shell">
       <header className="guide-hero">
@@ -75,13 +75,18 @@ function Guide({ guide, token }: { guide: GuestGuide; token: string | null }) {
         <div className="guide-rule" aria-hidden="true" />
         <p className="guide-hero-note">We are so glad you are here.</p>
       </header>
+      <GuestRouteNav
+        slug={guide.slug}
+        token={token}
+        routes={["", "/invitation", ...(authorizedHousehold && hasRsvpSection ? ["/rsvp" as const, "/rsvp/confirmation" as const] : []), ...(guide.hasGuestPass && authorizedHousehold ? ["/pass" as const] : [])]}
+      />
       <nav className="guide-nav" aria-label="Guide sections">
         {guide.sections.map(section => <a key={section.key} href={`#${section.key}`}>{section.type === "INTRO" ? "Welcome" : section.type === "DRESS_CODE" ? "Dress Code" : section.type === "CUSTOM" ? section.key.replaceAll("_", " ") : section.type === "RSVP" ? "RSVP" : "Places"}</a>)}
         {guide.program.length > 0 && <a href="#program">Program</a>}
         {guide.seating.length > 0 && <a href="#seating">Seating</a>}
       </nav>
       <div className="guide-content">
-        {guide.sections.map(section => <Section key={section.key} section={section} />)}
+        {guide.sections.map(section => <Section key={section.key} section={section} slug={guide.slug} token={token} />)}
         {guide.program.length > 0 && <section className="guide-card" id="program">
           <p className="guide-eyebrow">THE CELEBRATION</p><h2>Guest Program</h2>
           <div className="guide-program">{guide.program.map((item, index) => <article key={`${item.scheduledStart}-${index}`} className="guide-program-item">

@@ -71,9 +71,15 @@ end $$;
 insert into website_test_tokens values ('other-wedding',public.issue_household_website_token('20000000-0000-0000-0000-000000000803'));
 select public.publish_wedding_website('10000000-0000-0000-0000-000000000802',true);
 
+set local role postgres;
+insert into private.household_website_tokens(wedding_id,household_id,token_hash,created_at,expires_at)
+values ('10000000-0000-0000-0000-000000000801','20000000-0000-0000-0000-000000000801',
+  extensions.digest(repeat('e',64),'sha256'),now()-interval '2 days',now()-interval '1 day');
+insert into website_test_tokens values ('expired',repeat('e',64));
+
 set local role service_role;
 do $$
-declare j jsonb; t text;
+declare j jsonb; t text; other_token text; expired_token text;
 begin
   select public.guest_wedding_guide('guide-wedding-a') into j;
   if jsonb_array_length(j->'sections') <> 2 or j::text like '%Guest One%' or j::text like '%secret-%'
@@ -87,13 +93,53 @@ begin
     or jsonb_array_length(coalesce(j->'guestPasses','[]'::jsonb)) <> 0
     then raise exception 'Invited projection incorrect: %', j; end if;
   perform public.guest_submit_rsvp('guide-wedding-a',t,'40000000-0000-0000-0000-000000000801','ATTENDING','Vegetarian','No peanuts','Thank you');
+  if not exists (select 1 from public.guest_rsvps where guest_id='40000000-0000-0000-0000-000000000801'
+    and status='ATTENDING' and meal_choice='Vegetarian' and dietary_notes='No peanuts' and response_notes='Thank you'
+    and responded_at is not null) then raise exception 'Attending response fields were not saved'; end if;
+  perform public.guest_submit_rsvp('guide-wedding-a',t,'40000000-0000-0000-0000-000000000801','ATTENDING','Vegetarian','No peanuts','Thank you');
+  if (select count(*) from public.guest_rsvps where guest_id='40000000-0000-0000-0000-000000000801') <> 1 then
+    raise exception 'Repeated response created a duplicate RSVP row'; end if;
+  perform public.guest_submit_rsvp('guide-wedding-a',t,'40000000-0000-0000-0000-000000000801','DECLINED',null,null,null);
+  if not exists (select 1 from public.guest_rsvps where guest_id='40000000-0000-0000-0000-000000000801'
+    and status='DECLINED' and responded_at is not null) then raise exception 'Attending to Declined update failed'; end if;
+  perform public.guest_submit_rsvp('guide-wedding-a',t,'40000000-0000-0000-0000-000000000801','ATTENDING','Fish','No shellfish','Updated response');
+  if not exists (select 1 from public.guest_rsvps where guest_id='40000000-0000-0000-0000-000000000801'
+    and status='ATTENDING' and meal_choice='Fish' and dietary_notes='No shellfish'
+    and response_notes='Updated response') then raise exception 'Declined to Attending update failed'; end if;
+  if (select count(*) from public.guest_rsvps where guest_id='40000000-0000-0000-0000-000000000801') <> 1 then
+    raise exception 'RSVP editing created a duplicate row'; end if;
   if (select status from public.guest_rsvps where guest_id='40000000-0000-0000-0000-000000000802') <> 'NO_RESPONSE' then
     raise exception 'RSVP was not individual'; end if;
+  if not exists (select 1 from public.guest_household_rsvp_progress where household_id='20000000-0000-0000-0000-000000000801'
+    and total_guests=2 and responded_guests=1 and attending_guests=1 and declined_guests=0 and progress='PARTIALLY_RESPONDED') then
+    raise exception 'Household progress was not derived from its Guests'; end if;
   if (select delivery_status from public.guest_households where id='20000000-0000-0000-0000-000000000801') <> 'NOT_SENT' then
     raise exception 'RSVP changed invitation delivery'; end if;
   begin
     perform public.guest_submit_rsvp('guide-wedding-a',t,'40000000-0000-0000-0000-000000000803','ATTENDING');
     raise exception 'Cross Household RSVP succeeded';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.guest_submit_rsvp('guide-wedding-a',t,'40000000-0000-0000-0000-000000000804','ATTENDING');
+    raise exception 'Guest from another Wedding succeeded';
+  exception when insufficient_privilege then null; end;
+  select token into other_token from website_test_tokens where label='other-wedding';
+  begin
+    perform public.guest_submit_rsvp('guide-wedding-b',other_token,'40000000-0000-0000-0000-000000000801','ATTENDING');
+    raise exception 'Guest from another Wedding succeeded with the other Household token';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.guest_submit_rsvp('guide-wedding-a',null,'40000000-0000-0000-0000-000000000801','ATTENDING');
+    raise exception 'Public RSVP without an invitation token succeeded';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.guest_submit_rsvp('guide-wedding-a',repeat('f',64),'40000000-0000-0000-0000-000000000801','ATTENDING');
+    raise exception 'Invalid invitation token succeeded';
+  exception when insufficient_privilege then null; end;
+  select token into expired_token from website_test_tokens where label='expired';
+  begin
+    perform public.guest_submit_rsvp('guide-wedding-a',expired_token,'40000000-0000-0000-0000-000000000801','ATTENDING');
+    raise exception 'Expired invitation token succeeded';
   exception when insufficient_privilege then null; end;
   begin
     perform public.guest_wedding_guide('guide-wedding-a',repeat('f',64));
@@ -140,6 +186,10 @@ do $$ declare t text; begin
     perform public.guest_wedding_guide('guide-wedding-a',t);
     raise exception 'Reissued token left old token valid';
   exception when insufficient_privilege then null; end;
+  begin
+    perform public.guest_submit_rsvp('guide-wedding-a',t,'40000000-0000-0000-0000-000000000801','ATTENDING');
+    raise exception 'Reissued token left old RSVP access valid';
+  exception when insufficient_privilege then null; end;
 end $$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000801',true);
@@ -150,6 +200,10 @@ do $$ declare t text; begin
   begin
     perform public.guest_wedding_guide('guide-wedding-a',t);
     raise exception 'Revoked token succeeded';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.guest_submit_rsvp('guide-wedding-a',t,'40000000-0000-0000-0000-000000000801','ATTENDING');
+    raise exception 'Revoked token retained RSVP access';
   exception when insufficient_privilege then null; end;
 end $$;
 rollback;
