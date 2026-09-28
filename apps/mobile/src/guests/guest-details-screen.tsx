@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Modal, StyleSheet, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipan/ui";
 import {
@@ -36,6 +36,7 @@ import {
   type GuestPass,
   type GuestWorkspaceData,
 } from "./model";
+import { canManageWeddingStyling } from "../styling/model";
 import { useGuestWorkspace } from "./use-guest-workspace";
 import type { WorkspaceMembership } from "../workspace/model";
 import {
@@ -137,6 +138,7 @@ function GuestDetailsContent({
   const openGuestList = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/list", params: { weddingId } });
   const openEntourage = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/entourage", params: { weddingId } });
   const openSeating = () => router.navigate({ pathname: "/(wedding)/[weddingId]/seating", params: { weddingId } });
+  const openAttireGuidance = () => router.navigate({ pathname: "/(wedding)/[weddingId]/style/guests/[guestId]", params: { weddingId, guestId: entry.guest.id } } as unknown as Href);
   const toggleGroup = (groupId: string) => {
     const isMember = entry.groupIds.includes(groupId);
     void runMutation(
@@ -231,6 +233,17 @@ function GuestDetailsContent({
         guestName={guestName(entry)}
         rsvpStatus={rsvpStatus}
       />
+
+      <View style={styles.section}>
+        <SectionHeader
+          title="Guest Attire Guidance"
+          description="Review applicable Attire Groups or manage a personal override."
+          action={<KatipanButton label={canManageWeddingStyling(membership) ? "Manage guidance" : "View guidance"} variant="text" onPress={openAttireGuidance} />}
+        />
+        <EditorialCard style={styles.detailsCard}>
+          <KatipanText color="textMuted">Guest-specific instructions and colors remain separate from RSVP, Entourage roles, seating, and the Wedding Motif.</KatipanText>
+        </EditorialCard>
+      </View>
 
       <View style={styles.section}>
         <SectionHeader
