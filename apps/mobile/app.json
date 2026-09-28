@@ -28,7 +28,14 @@
       "expo-router",
       "expo-notifications",
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Katipan to scan Guest Pass QR codes for Wedding-Day check-in."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

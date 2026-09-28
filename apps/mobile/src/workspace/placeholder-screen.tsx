@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { colorTokens as c, spacingTokens as s } from "@katipan/ui";
 import { Brand } from "../onboarding/components";
@@ -71,6 +71,18 @@ export function MoreScreen() {
         </>}
         <KatipanButton label="Switch Wedding" variant="secondary" onPress={() => router.push("/(workspace)/weddings")} />
       </EditorialCard>
+      {membership && (
+        <EditorialCard style={styles.settingsCard}>
+          <KatipanText variant="labelCaps" color="secondary">WEDDING-DAY OPERATIONS</KatipanText>
+          <KatipanText variant="title">Guest arrivals and check-in</KatipanText>
+          <KatipanText color="textMuted">Scan Guest Passes, look up a Guest, and review individual check-in state.</KatipanText>
+          <KatipanButton
+            label="Open Wedding Day"
+            variant="secondary"
+            onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/day", params: { weddingId: membership.weddingId } } as unknown as Href)}
+          />
+        </EditorialCard>
+      )}
       <EditorialCard style={styles.settingsCard}>
         <KatipanText variant="title">Account security</KatipanText>
         <KatipanText color="textMuted">Sign out of this Katipan account on this device.</KatipanText>
