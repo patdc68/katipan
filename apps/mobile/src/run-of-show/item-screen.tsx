@@ -4,9 +4,9 @@ import { StyleSheet, View } from "react-native";
 import { colorTokens as c, spacingTokens as s } from "@katipan/ui";
 import { EditorialCard, EmptyState, ErrorState, FormField, KatipanButton, KatipanScreen, KatipanText, LoadingState, SectionHeader, StatusChip } from "../ui";
 import { formatTime, useWeddingDayRoute, WeddingDayHeader } from "../wedding-day/components";
-import { changeRunStatus, deleteRunItem, loadRun, resolveGuestReview, saveRunItem, setResponsibleMember } from "./api";
+import { changeRunStatus, deleteRunItem, loadRun, saveRunItem, setResponsibleMember } from "./api";
 import DateTimeField from "./DateTimeField";
-import { canManageRun, canReviewGuestProgram, runStatusLabel, safeRunError, SubmitGate, type GuestProgramLink, type RunData, type RunDraft, type RunItem, type RunStatus } from "./model";
+import { canManageRun, runStatusLabel, safeRunError, SubmitGate, type RunData, type RunDraft, type RunItem, type RunStatus } from "./model";
 
 export default function RunItemScreen({ create = false }: { create?: boolean }) {
   const { itemId: rawItemId } = useLocalSearchParams<{ itemId?: string | string[] }>();
@@ -50,7 +50,6 @@ export default function RunItemScreen({ create = false }: { create?: boolean }) 
   if (!create && !item) return <KatipanScreen><ErrorState title="Item unavailable in this Wedding" onRetry={back} /></KatipanScreen>;
   const data = load.data;
   const canEdit = canManageRun(membership);
-  const canReview = canReviewGuestProgram(membership);
   const set = <K extends keyof RunDraft>(field: K, value: RunDraft[K]) => setDraftState({ identity, value: { ...draft, [field]: value } });
   const linked = data.guestLinks.filter(link => link.operational_item_id === itemId);
   return <KatipanScreen contentContainerStyle={styles.page}>
@@ -105,8 +104,13 @@ export default function RunItemScreen({ create = false }: { create?: boolean }) 
             onPress={() => void perform(() => setResponsibleMember(membership, item.id, member.id, !assigned))} /> : assigned ? <StatusChip label="Responsible" /> : null}</View>;
         })}
       </EditorialCard>
-      {linked.map(link => <GuestReview key={link.id} link={link} item={item} canReview={canReview} busy={busy}
-        onResolve={(action, start, end, publish) => void perform(() => resolveGuestReview(membership, link.id, action, start, end, publish))} />)}
+      {linked.map(link => <EditorialCard key={link.id} style={[styles.form, link.review_required && styles.alert]}>
+        <SectionHeader title="Linked Guest Program" description={link.title} />
+        <View style={styles.row}><StatusChip label={link.is_published ? "Published" : "Draft"} tone={link.is_published ? "success" : "neutral"} />
+          {link.review_required && <StatusChip label="Review Required" tone="warning" />}</View>
+        <KatipanText color="textMuted">Guest-facing {formatTime(link.scheduled_start)}{link.scheduled_end ? ` – ${formatTime(link.scheduled_end)}` : ""}. Operational changes do not copy automatically.</KatipanText>
+        <KatipanButton label="Open Guest Program Item" variant="secondary" onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/website/program/[itemId]", params: { weddingId, itemId: link.id } } as unknown as Href)} />
+      </EditorialCard>)}
       {canEdit && <EditorialCard style={styles.form}>
         <SectionHeader title="Remove Item" description="Linked Guest Program items retain their own published schedule." />
         {confirmDelete ? <><KatipanText>Delete this operational item?</KatipanText><KatipanButton label="Confirm Delete" variant="secondary" disabled={busy} onPress={() => void perform(async () => { await deleteRunItem(membership, item.id); back(); })} /><KatipanButton label="Cancel" variant="text" onPress={() => setConfirmDelete(false)} /></>
@@ -123,36 +127,6 @@ function OptionalTime({ label, value, onChange, onClear, disabled }: { label: st
 }
 function Choice({ label, selected, disabled, onPress }: { label: string; selected: boolean; disabled: boolean; onPress: () => void }) {
   return <KatipanButton label={`${selected ? "✓ " : ""}${label}`} variant={selected ? "primary" : "secondary"} disabled={disabled} onPress={onPress} />;
-}
-function GuestReview({ link, item, canReview, busy, onResolve }: { link: GuestProgramLink; item: RunItem; canReview: boolean; busy: boolean;
-  onResolve: (action: "KEEP" | "UPDATE", start?: string, end?: string | null, publish?: boolean) => void }) {
-  const [update, setUpdate] = useState(false);
-  const [start, setStart] = useState<string | null>(null);
-  const [end, setEnd] = useState<string | null>(null);
-  const [publication, setPublication] = useState<"PRESERVE" | "PUBLISH" | "UNPUBLISH">("PRESERVE");
-  return <EditorialCard style={[styles.form, link.review_required && styles.alert]}>
-    <SectionHeader title="Guest Schedule Review" description={link.title} />
-    <StatusChip label={link.review_required ? "Review required" : "No review pending"} tone={link.review_required ? "warning" : "neutral"} />
-    <KatipanText color="textMuted">Operational: {item.title} · Scheduled {formatTime(item.scheduled_start)}{item.scheduled_end ? ` – ${formatTime(item.scheduled_end)}` : ""}
-      {item.actual_start ? ` · Actual ${formatTime(item.actual_start)}${item.actual_end ? ` – ${formatTime(item.actual_end)}` : ""}` : ""}</KatipanText>
-    <KatipanText color="textMuted">Guest-facing: {formatTime(link.scheduled_start)}{link.scheduled_end ? ` – ${formatTime(link.scheduled_end)}` : ""} · {link.is_published ? "Published" : "Unpublished"}</KatipanText>
-    {link.review_required && (canReview ? <>
-      <KatipanText color="textMuted">Choose how to resolve this linked Guest Program item. Nothing changes for guests until you confirm.</KatipanText>
-      <KatipanButton label="Keep Guest Schedule" variant="secondary" disabled={busy} onPress={() => onResolve("KEEP")} />
-      <KatipanButton label="Update Guest Schedule" variant="secondary" disabled={busy} onPress={() => setUpdate(value => !value)} />
-      {update && <View style={styles.form}>
-        <DateTimeField label="Guest-facing Start" value={start} onChange={setStart} disabled={busy} />
-        <OptionalTime label="Guest-facing End" value={end} onChange={setEnd} onClear={() => setEnd(null)} disabled={busy} />
-        <KatipanText variant="labelLarge">Publication after update</KatipanText>
-        <View style={styles.choices}>
-          <Choice label="Keep current publication" selected={publication === "PRESERVE"} disabled={busy} onPress={() => setPublication("PRESERVE")} />
-          <Choice label="Publish" selected={publication === "PUBLISH"} disabled={busy} onPress={() => setPublication("PUBLISH")} />
-          <Choice label="Unpublish" selected={publication === "UNPUBLISH"} disabled={busy} onPress={() => setPublication("UNPUBLISH")} />
-        </View>
-        <KatipanButton label="Confirm Guest Schedule Update" disabled={!start || busy} onPress={() => onResolve("UPDATE", start ?? undefined, end, publication === "PRESERVE" ? undefined : publication === "PUBLISH")} />
-      </View>}
-    </> : <KatipanText color="secondary">Guest schedule review required. An Owner or Full Coordinator must confirm the guest-facing schedule.</KatipanText>)}
-  </EditorialCard>;
 }
 const styles = StyleSheet.create({
   page: { gap: s.large, paddingBottom: s.extraLarge }, form: { gap: s.medium, backgroundColor: c.surfaceLowest },
