@@ -73,6 +73,15 @@ export function MoreScreen() {
       </EditorialCard>
       {membership && (
         <EditorialCard style={styles.settingsCard}>
+          <KatipanText variant="labelCaps" color="secondary">WEDDING ACCESS</KatipanText>
+          <KatipanText variant="title">Wedding Team & Coordinator Access</KatipanText>
+          <KatipanText color="textMuted">See active Wedding members, pending invitations, and the actions available to your current Wedding role.</KatipanText>
+          <KatipanButton label="Open Wedding Team" variant="secondary"
+            onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/team", params: { weddingId: membership.weddingId } } as unknown as Href)} />
+        </EditorialCard>
+      )}
+      {membership && (
+        <EditorialCard style={styles.settingsCard}>
           <KatipanText variant="labelCaps" color="secondary">WEDDING STYLING</KatipanText>
           <KatipanText variant="title">Wedding Motif & Dress Code</KatipanText>
           <KatipanText color="textMuted">Plan the Wedding aesthetic, Guest attire, group guidance, and individual exceptions in one styling workspace.</KatipanText>

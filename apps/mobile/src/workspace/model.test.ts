@@ -13,14 +13,15 @@ import {
 
 function membership(weddingId: string, role: WorkspaceMembership["role"], status: WorkspaceMembership["status"] = "ACTIVE"): WorkspaceMembership {
   return {
-    membershipId: `m-${weddingId}`,
+      membershipId: `m-${weddingId}`,
     weddingId,
     userId: "user-1",
     role,
     status,
     partnerNames: [],
-    wedding: {
-      id: weddingId,
+      wedding: {
+        id: weddingId,
+        created_by_user_id: role === "FULL_COORDINATOR" ? "user-1" : "user-2",
       display_name: null,
       wedding_date: null,
       general_location: null,

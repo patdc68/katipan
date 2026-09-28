@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { View, StyleSheet } from "react-native";
 import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipan/ui";
 import { KatipanScreen, KatipanText, KatipanButton } from "../../ui";
@@ -14,6 +14,7 @@ export default function CreateWedding() {
     <View style={styles.card}><KatipanText variant="title">What we’ll personalize</KatipanText><InfoRow title="Your Shared Planning Workspace" description="One collaborative space for you and your partner with live synced guest lists and budgets." /><InfoRow icon="◷" title="Personalized Milestone Roadmap" description="Built around your estimated date and celebration style." /><InfoRow icon="☷" title="A Plan Built Around Your Wedding" description="Checklist, budget, guests, places, and wedding details in one space." /></View>
     <View style={styles.time}><KatipanText variant="label" color="textMuted" style={styles.center}>Takes only 2 minutes · Details can be changed later</KatipanText></View>
     <KatipanButton label="Start Planning  →" onPress={() => { beginDetails(); router.push("/(access)/wedding-details"); }} />
+    <KatipanButton label="Creating for a client? Create a Client Wedding" variant="text" onPress={() => router.push("/(coordinator)/onboarding" as unknown as Href)} />
   </KatipanScreen>;
 }
 const styles = StyleSheet.create({ content: { gap: s.large }, intro: { alignItems: "center", gap: s.small }, center: { textAlign: "center" }, card: { backgroundColor: c.surfaceLow, borderRadius: r.extraLarge, padding: s.large, gap: s.medium }, time: { backgroundColor: c.surfaceContainer, borderRadius: r.pill, padding: s.small } });

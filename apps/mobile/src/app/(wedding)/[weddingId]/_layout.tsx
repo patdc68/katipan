@@ -60,6 +60,7 @@ export default function WeddingTabsLayout() {
       <Tabs.Screen name="style" options={{ href: null, title: "Wedding Styling" }} />
       <Tabs.Screen name="budget" options={{ title: "Budget", tabBarAccessibilityLabel: "Budget tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>¤</Text> }} />
       <Tabs.Screen name="more" options={{ title: "More", tabBarAccessibilityLabel: "More tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>•••</Text> }} />
+      <Tabs.Screen name="team" options={{ href: null, title: "Wedding Team" }} />
     </Tabs>
   );
 }
