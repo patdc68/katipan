@@ -68,6 +68,48 @@ function budgetItemRoute(weddingId: string, itemId: string): Href {
   } as unknown as Href;
 }
 
+function supplierPaymentsRoute(weddingId: string, supplierId: string): Href {
+  return {
+    pathname: "/(wedding)/[weddingId]/budget/suppliers/[supplierId]/payments",
+    params: { weddingId, supplierId },
+  } as unknown as Href;
+}
+
+function newInstallmentRoute(weddingId: string, supplierId: string): Href {
+  return {
+    pathname: "/(wedding)/[weddingId]/budget/suppliers/[supplierId]/installments/new",
+    params: { weddingId, supplierId },
+  } as unknown as Href;
+}
+
+function supplierInstallmentRoute(weddingId: string, supplierId: string, installmentId: string): Href {
+  return {
+    pathname: "/(wedding)/[weddingId]/budget/suppliers/[supplierId]/installments/[installmentId]",
+    params: { weddingId, supplierId, installmentId },
+  } as unknown as Href;
+}
+
+function newSupplierPaymentRoute(weddingId: string, supplierId: string): Href {
+  return {
+    pathname: "/(wedding)/[weddingId]/budget/suppliers/[supplierId]/payments/new",
+    params: { weddingId, supplierId },
+  } as unknown as Href;
+}
+
+function supplierPaymentDetailsRoute(weddingId: string, supplierId: string, paymentId: string): Href {
+  return {
+    pathname: "/(wedding)/[weddingId]/budget/suppliers/[supplierId]/payments/[paymentId]",
+    params: { weddingId, supplierId, paymentId },
+  } as unknown as Href;
+}
+
+function displayDueDate(value: string): string {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime())
+    ? new Intl.DateTimeFormat("en-PH", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(date)
+    : value;
+}
+
 function supplierIdFromParams(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
@@ -429,7 +471,7 @@ export function SupplierDetailsScreen() {
     return <KatipanScreen><ErrorState title="Supplier unavailable" description="This Supplier isn't available in the selected Wedding." onRetry={resource.retry} /></KatipanScreen>;
   }
 
-  const { supplier, finance, budgetItems, contractDocuments, currencyCode } = resource.data.data;
+  const { supplier, finance, budgetItems, contractDocuments, upcomingInstallments, recentPayments, currencyCode } = resource.data.data;
   const goBack = () => router.canGoBack() ? router.back() : router.replace(suppliersRoute(resource.weddingId));
   const websiteHref = supplierWebsiteHref(supplier.website);
   const emailHref = supplierEmailHref(supplier.email);
@@ -561,6 +603,65 @@ export function SupplierDetailsScreen() {
       </View>
 
       <View style={styles.section}>
+        <SectionHeader
+          title="Payment Schedule"
+          description="Planned installments and recent actual payments stay separate."
+          action={<KatipanButton label="View all" variant="text" onPress={() => router.push(supplierPaymentsRoute(resource.weddingId, supplier.id))} />}
+        />
+        <EditorialCard style={styles.paymentPreviewCard}>
+          <View style={styles.inlineActions}>
+            <KatipanButton label="Record Payment" onPress={() => router.push(newSupplierPaymentRoute(resource.weddingId, supplier.id))} />
+            <KatipanButton label="Add Installment" variant="secondary" onPress={() => router.push(newInstallmentRoute(resource.weddingId, supplier.id))} />
+          </View>
+          <KatipanText variant="labelCaps" color="secondary">UPCOMING AND OVERDUE</KatipanText>
+          {upcomingInstallments.length === 0 ? (
+            <KatipanText variant="bodySmall" color="textMuted">No upcoming or overdue installments.</KatipanText>
+          ) : upcomingInstallments.map((installment) => (
+            <Pressable
+              key={installment.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit ${installment.status.toLocaleLowerCase().replaceAll("_", " ")} installment due ${displayDueDate(installment.dueDate)}`}
+              onPress={() => router.push(supplierInstallmentRoute(resource.weddingId, supplier.id, installment.id))}
+            >
+              <View style={styles.previewRow}>
+                <View style={styles.supplierRowCopy}>
+                  <KatipanText variant="title">{formatCurrency(installment.amount, currencyCode)} · {displayDueDate(installment.dueDate)}</KatipanText>
+                  <KatipanText variant="bodySmall" color="textMuted">
+                    Paid {formatCurrency(installment.paidAmount, currencyCode)} · Unpaid {formatCurrency(installment.unpaidBalance, currencyCode)}
+                  </KatipanText>
+                  {installment.budgetItemName && <KatipanText variant="bodySmall" color="textMuted">{installment.budgetItemName}</KatipanText>}
+                  {installment.notes && <KatipanText variant="bodySmall" color="textMuted" numberOfLines={2}>{installment.notes}</KatipanText>}
+                </View>
+                <StatusChip label={installment.status.replaceAll("_", " ")} tone={installment.status === "OVERDUE" ? "error" : installment.status === "PARTIALLY_PAID" ? "warning" : "neutral"} />
+              </View>
+            </Pressable>
+          ))}
+          <View style={styles.noteDivider} />
+          <KatipanText variant="labelCaps" color="secondary">RECENT ACTUAL PAYMENTS</KatipanText>
+          {recentPayments.length === 0 ? (
+            <KatipanText variant="bodySmall" color="textMuted">No Supplier payments recorded yet.</KatipanText>
+          ) : recentPayments.map((payment) => (
+            <Pressable
+              key={payment.id}
+              accessibilityRole="button"
+              accessibilityLabel={`View payment of ${formatCurrency(payment.amount, currencyCode)}`}
+              onPress={() => router.push(supplierPaymentDetailsRoute(resource.weddingId, supplier.id, payment.id))}
+            >
+              <View style={styles.previewRow}>
+                <View style={styles.supplierRowCopy}>
+                  <KatipanText variant="title">{formatCurrency(payment.amount, currencyCode)}</KatipanText>
+                  <KatipanText variant="bodySmall" color="textMuted">
+                    {Number.isFinite(Date.parse(payment.paid_at)) ? new Date(payment.paid_at).toLocaleDateString() : payment.paid_at}
+                  </KatipanText>
+                </View>
+                {payment.reversed && <StatusChip label="Reversed" tone="error" />}
+              </View>
+            </Pressable>
+          ))}
+        </EditorialCard>
+      </View>
+
+      <View style={styles.section}>
         <SectionHeader title="Linked Budget Items" description="Budget estimates remain separate from Supplier actual payments." />
         {budgetItems.length === 0 ? (
           <EditorialCard style={styles.emptyCard}>
@@ -610,7 +711,7 @@ export function SupplierDetailsScreen() {
             ))}
           </EditorialCard>
         )}
-        <KatipanText variant="bodySmall" color="textMuted">Uploading and linking files is not available in this finance slice.</KatipanText>
+        <KatipanText variant="bodySmall" color="textMuted">Payment receipts are managed from Payment Details. Supplier contract uploads remain separate.</KatipanText>
       </View>
     </KatipanScreen>
   );
@@ -646,6 +747,8 @@ const styles = StyleSheet.create({
   longText: { flexWrap: "wrap", lineHeight: 24 },
   commitmentCard: { gap: s.medium },
   financeCard: { gap: s.medium },
+  paymentPreviewCard: { gap: s.medium },
+  previewRow: { flexDirection: "row", alignItems: "center", gap: s.medium, paddingVertical: s.small, borderBottomWidth: 1, borderBottomColor: c.stoneBorder },
   financeMetric: { gap: s.micro, paddingVertical: s.small, borderBottomWidth: 1, borderBottomColor: c.stoneBorder },
   editorCard: { gap: s.medium },
   notesInput: { minHeight: 112, paddingTop: s.medium },

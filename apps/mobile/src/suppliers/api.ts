@@ -9,8 +9,10 @@ import {
   type SupplierDetailsData,
   type SupplierEditorData,
   type SupplierFinanceRow,
+  type SupplierInstallmentPreview,
   type SupplierListData,
   type SupplierLoadResult,
+  type SupplierRecentPayment,
   type SupplierRecord,
   type SupplierWrite,
 } from "./model";
@@ -228,6 +230,89 @@ export async function loadSupplierDetails(
     return { kind: "private" };
   }
 
+  const [schedulePreviewResult, recentPaymentsResult] = await Promise.all([
+    supabase.from("supplier_installment_schedule")
+      .select("id,wedding_id,supplier_id,budget_item_id,amount,due_date,paid_amount,unpaid_balance,status,notes")
+      .eq("wedding_id", membership.weddingId)
+      .eq("supplier_id", supplierId)
+      .in("status", ["PENDING", "PARTIALLY_PAID", "OVERDUE"])
+      .order("due_date", { ascending: true })
+      .limit(3),
+    supabase.from("supplier_payment_transactions")
+      .select("id,wedding_id,supplier_id,installment_id,budget_item_id,kind,amount,paid_at,payment_method,reference_number,notes,reverses_transaction_id")
+      .eq("wedding_id", membership.weddingId)
+      .eq("supplier_id", supplierId)
+      .eq("kind", "PAYMENT")
+      .order("paid_at", { ascending: false })
+      .limit(3),
+  ]);
+  if (permissionError(schedulePreviewResult.error) || permissionError(recentPaymentsResult.error)) return { kind: "private" };
+  if (schedulePreviewResult.error) throw schedulePreviewResult.error;
+  if (recentPaymentsResult.error) throw recentPaymentsResult.error;
+
+  const scheduleRows = schedulePreviewResult.data ?? [];
+  if (scheduleRows.some((row) =>
+    row.wedding_id !== membership.weddingId
+    || row.supplier_id !== supplierId
+    || !row.id
+    || !row.due_date
+    || !["PENDING", "PARTIALLY_PAID", "OVERDUE"].includes(row.status ?? "")
+    || typeof row.amount !== "number"
+    || typeof row.paid_amount !== "number"
+    || typeof row.unpaid_balance !== "number"
+    || (row.budget_item_id !== null && !budgetItems.some((item) => item.id === row.budget_item_id))
+  )) return { kind: "unavailable" };
+  const upcomingInstallments: SupplierInstallmentPreview[] = scheduleRows.map((row) => ({
+    id: row.id as string,
+    amount: row.amount as number,
+    dueDate: row.due_date as string,
+    paidAmount: row.paid_amount as number,
+    unpaidBalance: row.unpaid_balance as number,
+    status: row.status as SupplierInstallmentPreview["status"],
+    budgetItemId: row.budget_item_id,
+    budgetItemName: row.budget_item_id
+      ? budgetItems.find((item) => item.id === row.budget_item_id)?.name ?? null
+      : null,
+    notes: row.notes,
+  }));
+
+  const recentPaymentRows = recentPaymentsResult.data ?? [];
+  if (recentPaymentRows.some((row) =>
+    row.wedding_id !== membership.weddingId
+    || row.supplier_id !== supplierId
+    || row.kind !== "PAYMENT"
+    || !row.id
+    || typeof row.amount !== "number"
+    || typeof row.paid_at !== "string"
+    || !Number.isFinite(Date.parse(row.paid_at))
+  )) return { kind: "unavailable" };
+  const recentPaymentIds = recentPaymentRows.map((row) => row.id).filter((id): id is string => Boolean(id));
+  const reversalsResult = recentPaymentIds.length
+    ? await supabase.from("supplier_payment_transactions")
+      .select("reverses_transaction_id,wedding_id,supplier_id,kind")
+      .eq("wedding_id", membership.weddingId)
+      .eq("supplier_id", supplierId)
+      .eq("kind", "REVERSAL")
+      .in("reverses_transaction_id", recentPaymentIds)
+    : { data: [], error: null };
+  if (permissionError(reversalsResult.error)) return { kind: "private" };
+  if (reversalsResult.error) throw reversalsResult.error;
+  const reversedIds = new Set((reversalsResult.data ?? [])
+    .filter((row) => row.wedding_id === membership.weddingId && row.supplier_id === supplierId && row.kind === "REVERSAL")
+    .map((row) => row.reverses_transaction_id)
+    .filter((id): id is string => Boolean(id)));
+  const recentPayments: SupplierRecentPayment[] = recentPaymentRows.map((row) => ({
+    id: row.id as string,
+    amount: row.amount as number,
+    paid_at: row.paid_at as string,
+    installment_id: row.installment_id,
+    budget_item_id: row.budget_item_id,
+    payment_method: row.payment_method,
+    reference_number: row.reference_number,
+    notes: row.notes,
+    reversed: reversedIds.has(row.id as string),
+  }));
+
   return {
     kind: "ready",
     data: {
@@ -236,6 +321,8 @@ export async function loadSupplierDetails(
       finance,
       budgetItems: budgetItems.map((item) => ({ ...item, categoryName: categories.get(item.category_id) ?? "" })),
       contractDocuments: documents,
+      upcomingInstallments,
+      recentPayments,
     },
   };
 }

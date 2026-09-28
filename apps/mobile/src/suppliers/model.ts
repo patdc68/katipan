@@ -47,12 +47,32 @@ export type SupplierContractDocument = Pick<
   | "visibility" | "status" | "updated_at"
 >;
 
+export type SupplierInstallmentPreview = {
+  id: string;
+  amount: number;
+  dueDate: string;
+  paidAmount: number;
+  unpaidBalance: number;
+  status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE" | "CANCELLED";
+  budgetItemId: string | null;
+  budgetItemName: string | null;
+  notes: string | null;
+};
+
+export type SupplierRecentPayment = Pick<
+  Database["public"]["Tables"]["supplier_payment_transactions"]["Row"],
+  "id" | "amount" | "paid_at" | "installment_id" | "budget_item_id"
+  | "payment_method" | "reference_number" | "notes"
+> & { reversed: boolean };
+
 export type SupplierDetailsData = {
   currencyCode: string;
   supplier: SupplierRecord;
   finance: SupplierFinanceTotals;
   budgetItems: SupplierBudgetItem[];
   contractDocuments: SupplierContractDocument[];
+  upcomingInstallments: SupplierInstallmentPreview[];
+  recentPayments: SupplierRecentPayment[];
 };
 
 export type SupplierEditorData = {
