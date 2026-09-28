@@ -109,7 +109,7 @@ export async function loadGuestWorkspace(membership: WorkspaceMembership): Promi
   const weddingId = membership.weddingId;
   const [householdsResult, guestsResult, peopleResult, rsvpsResult, groupsResult, groupMembershipsResult,
     allowancesResult, allowanceClaimsResult, householdProgressResult, entourageRolesResult,
-    entourageAssignmentsResult, seatingEventsResult, seatingTablesResult, seatingAssignmentsResult] = await Promise.all([
+    entourageAssignmentsResult, seatingEventsResult, seatingTablesResult, seatingSeatsResult, seatingAssignmentsResult] = await Promise.all([
     supabase.from("guest_households").select("*").eq("wedding_id", weddingId).order("display_name"),
     supabase.from("guests").select("*").eq("wedding_id", weddingId).order("created_at"),
     supabase.from("wedding_people").select("*").eq("wedding_id", weddingId).order("display_name"),
@@ -123,6 +123,7 @@ export async function loadGuestWorkspace(membership: WorkspaceMembership): Promi
     supabase.from("entourage_assignments").select("*").eq("wedding_id", weddingId),
     supabase.from("seating_events").select("*").eq("wedding_id", weddingId),
     supabase.from("seating_tables").select("*").eq("wedding_id", weddingId),
+    supabase.from("seating_seats").select("*").eq("wedding_id", weddingId),
     supabase.from("seating_assignments").select("*").eq("wedding_id", weddingId),
   ]);
   const requiredError = [
@@ -151,23 +152,26 @@ export async function loadGuestWorkspace(membership: WorkspaceMembership): Promi
   }
 
   let seating: GuestSeatingSummary[] | null = null;
-  if (!seatingEventsResult.error && !seatingTablesResult.error && !seatingAssignmentsResult.error) {
-    const events = new Map((seatingEventsResult.data ?? []).map((event) => [event.id, event]));
-    const tables = new Map((seatingTablesResult.data ?? []).map((table) => [table.id, table]));
-    const guestIds = new Set((guestsResult.data ?? []).map((guest) => guest.id));
-    seating = (seatingAssignmentsResult.data ?? []).flatMap((assignment) => {
-      const event = events.get(assignment.event_id);
-      const table = tables.get(assignment.table_id);
-      if (assignment.wedding_id !== weddingId || !guestIds.has(assignment.guest_id)
-        || !event || event.wedding_id !== weddingId || !table || table.wedding_id !== weddingId
-        || table.event_id !== event.id) return [];
-      return [{
-        guestId: assignment.guest_id,
-        eventName: event.name,
-        tableName: table.name,
-        hasSeat: assignment.seat_id !== null,
-      }];
-    });
+  if (!seatingEventsResult.error && !seatingTablesResult.error && !seatingSeatsResult.error && !seatingAssignmentsResult.error) {
+    const reception = (seatingEventsResult.data ?? []).find((event) => event.wedding_id === weddingId && event.event_kind === "RECEPTION");
+    if (reception) {
+      const tables = new Map((seatingTablesResult.data ?? []).filter((table) => table.wedding_id === weddingId && table.event_id === reception.id).map((table) => [table.id, table]));
+      const seats = new Map((seatingSeatsResult.data ?? []).filter((seat) => seat.wedding_id === weddingId && seat.event_id === reception.id).map((seat) => [seat.id, seat]));
+      const guestIds = new Set((guestsResult.data ?? []).filter((guest) => guest.wedding_id === weddingId).map((guest) => guest.id));
+      seating = (seatingAssignmentsResult.data ?? []).flatMap((assignment) => {
+        const table = tables.get(assignment.table_id);
+        if (assignment.wedding_id !== weddingId || assignment.event_id !== reception.id || !guestIds.has(assignment.guest_id)
+          || !table || table.wedding_id !== weddingId || table.event_id !== reception.id) return [];
+        const seat = assignment.seat_id ? seats.get(assignment.seat_id) : null;
+        return [{
+          guestId: assignment.guest_id,
+          eventName: reception.name,
+          tableName: table.name,
+          hasSeat: assignment.seat_id !== null,
+          seatLabel: seat?.table_id === table.id ? seat.label : null,
+        }];
+      });
+    }
   }
 
   return {
