@@ -2143,6 +2143,7 @@ export type Database = {
         Row: {
           amount: number
           budget_item_id: string | null
+          client_request_id: string | null
           created_at: string
           id: string
           installment_id: string | null
@@ -2161,6 +2162,7 @@ export type Database = {
         Insert: {
           amount: number
           budget_item_id?: string | null
+          client_request_id?: string | null
           created_at?: string
           id?: string
           installment_id?: string | null
@@ -2179,6 +2181,7 @@ export type Database = {
         Update: {
           amount?: number
           budget_item_id?: string | null
+          client_request_id?: string | null
           created_at?: string
           id?: string
           installment_id?: string | null
@@ -4039,6 +4042,7 @@ export type Database = {
         Args: {
           p_amount: number
           p_budget_item_id: string
+          p_client_request_id: string
           p_installment_id: string
           p_notes?: string
           p_paid_at: string
