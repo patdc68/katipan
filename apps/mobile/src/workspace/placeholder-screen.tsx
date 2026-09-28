@@ -73,6 +73,15 @@ export function MoreScreen() {
       </EditorialCard>
       {membership && (
         <EditorialCard style={styles.settingsCard}>
+          <KatipanText variant="labelCaps" color="secondary">WEDDING PLANNING</KatipanText>
+          <KatipanText variant="title">Our Places</KatipanText>
+          <KatipanText color="textMuted">Save ceremony, reception, accommodation, and other Wedding Places with notes for your group.</KatipanText>
+          <KatipanButton label="Manage Wedding Places" variant="secondary"
+            onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/places", params: { weddingId: membership.weddingId } } as unknown as Href)} />
+        </EditorialCard>
+      )}
+      {membership && (
+        <EditorialCard style={styles.settingsCard}>
           <KatipanText variant="labelCaps" color="secondary">WEDDING WEBSITE</KatipanText>
           <KatipanText variant="title">Guest Program</KatipanText>
           <KatipanText color="textMuted">Manage the schedule that guests see, separate from the operational Run of Show.</KatipanText>
