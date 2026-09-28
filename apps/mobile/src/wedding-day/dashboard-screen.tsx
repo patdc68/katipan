@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import type { Href } from "expo-router";
+import { useFocusEffect, type Href } from "expo-router";
 import { colorTokens as c, spacingTokens as s } from "@katipan/ui";
 import { EditorialCard, EmptyState, ErrorState, KatipanButton, KatipanScreen, KatipanText, LoadingState, SectionHeader } from "../ui";
 import { WeddingDayItemCard, WeddingDayHeader, useWeddingDayRoute } from "./components";
@@ -15,14 +15,14 @@ export function WeddingDayDashboardScreen() {
   const [load, setLoad] = useState<DashboardLoad | null>(null);
   const requestId = `${weddingId}:${membership?.membershipId ?? "none"}:${workspace.cacheRevision}:${retryCount}`;
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let active = true;
     if (!isCurrent || !membership) return () => { active = false; };
     void loadWeddingDayDashboard(membership)
       .then((data) => { if (active) setLoad({ requestId, data, failed: false }); })
       .catch(() => { if (active) setLoad({ requestId, data: null, failed: true }); });
     return () => { active = false; };
-  }, [isCurrent, membership, requestId]);
+  }, [isCurrent, membership, requestId]));
 
   const currentLoad = load?.requestId === requestId ? load : null;
   if (workspace.loading || (isCurrent && membership && !currentLoad)) {
@@ -39,6 +39,7 @@ export function WeddingDayDashboardScreen() {
   const hasTimelineItems = Boolean(dashboard.currentItem || dashboard.nextItem || dashboard.delayedItems.length);
   const goToCheckIn = () => router.push({ pathname: "/(wedding)/[weddingId]/day/check-in", params: { weddingId } } as unknown as Href);
   const goToScanner = () => router.push({ pathname: "/(wedding)/[weddingId]/day/scan", params: { weddingId } } as unknown as Href);
+  const goToRun = () => router.push({ pathname: "/(wedding)/[weddingId]/plan/run-of-show", params: { weddingId } } as unknown as Href);
 
   return (
     <KatipanScreen contentContainerStyle={styles.page}>
@@ -62,11 +63,11 @@ export function WeddingDayDashboardScreen() {
         <SectionHeader
           title="Run of Show"
           description="Operational Wedding-Day items"
-          action={<KatipanButton label="Guest Check-In" variant="text" onPress={goToCheckIn} />}
+          action={<KatipanButton label="Open Run of Show" variant="text" onPress={goToRun} />}
         />
         {!hasTimelineItems ? (
           <EditorialCard style={styles.emptyCard}>
-            <EmptyState title="No Run of Show items yet" description="The timeline is empty for this Wedding. Check-in remains available without a completed schedule." />
+            <EmptyState title="No Run of Show items yet" description="The operational timeline is empty for this Wedding." action={<KatipanButton label="Open Run of Show" variant="secondary" onPress={goToRun} />} />
           </EditorialCard>
         ) : (
           <>
@@ -86,6 +87,7 @@ export function WeddingDayDashboardScreen() {
           {dashboard.delayedItems.map((item) => <WeddingDayItemCard key={item.id} item={item} label="DELAYED" />)}
         </View>
       )}
+      <KatipanButton label="View Full Run of Show" variant="secondary" onPress={goToRun} />
 
       <EditorialCard style={styles.browseCard}>
         <SectionHeader title="Guest Check-In" description="Browse individual RSVP and current check-in states." />
