@@ -32,13 +32,19 @@ Deno.test("RSVP requires opaque token and individual Guest ID", async () => {
     { slug: "test-wedding", guestId, status: "ATTENDING" },
     { slug: "test-wedding", invitationToken: "surname", guestId, status: "ATTENDING" },
     { slug: "test-wedding", invitationToken: token, guestId: "household", status: "ATTENDING" },
+    { slug: "test-wedding", invitationToken: token, guestId, status: "NO_RESPONSE" },
   ]) {
     if ((await handler(request(bad))).status !== 400) throw new Error("Invalid RSVP accepted");
   }
   if (calls.length !== 0) throw new Error("Invalid requests reached database");
-  const response = await handler(request({ slug: "test-wedding", invitationToken: token, guestId, status: "DECLINED" }));
+  const response = await handler(request({ slug: "test-wedding", invitationToken: token, guestId, status: "ATTENDING",
+    mealChoice: "Vegetarian", dietaryNotes: "No peanuts", responseNotes: "Thank you" }));
   if (response.status !== 200 || calls[0].body.p_guest_id !== guestId || calls[0].body.p_token !== token) {
     throw new Error("Individual RSVP projection call failed");
+  }
+  if (calls[0].body.p_status !== "ATTENDING" || calls[0].body.p_meal_choice !== "Vegetarian"
+    || calls[0].body.p_dietary_notes !== "No peanuts" || calls[0].body.p_response_notes !== "Thank you") {
+    throw new Error("RSVP answer details were not forwarded");
   }
 });
 

@@ -12,7 +12,7 @@ The five persisted enum values are `SAMPAGUITA`, `LUNTIAN`, `FILIPINIANA`, `MODE
 
 ## Sections and audiences
 
-`INTRO`, `PLACES`, `DRESS_CODE`, `RSVP`, and `CUSTOM` use `wedding_website_sections`; Guest Program is separate. Managers can add the four standard types when absent, add/delete `CUSTOM`, edit `INTRO`/`CUSTOM` content, set enabled and audience, and move sections in the ordered list. Nontext section content comes from its domain records. New sections start disabled and hidden. The backend projection excludes disabled and `HIDDEN` sections. `PUBLIC` is eligible without Household context when website access allows it. `INVITED` and `PERSONALIZED` need a valid Household token. The web parser repeats that public filter as a defense in depth. The RSVP section is read-only in this branch; submission belongs to the next slice.
+`INTRO`, `PLACES`, `DRESS_CODE`, `RSVP`, and `CUSTOM` use `wedding_website_sections`; Guest Program is separate. Managers can add the four standard types when absent, add/delete `CUSTOM`, edit `INTRO`/`CUSTOM` content, set enabled and audience, and move sections in the ordered list. Nontext section content comes from its domain records. New sections start disabled and hidden. The backend projection excludes disabled and `HIDDEN` sections. `PUBLIC` is eligible without Household context when website access allows it. `INVITED` and `PERSONALIZED` need a valid Household token. The web parser repeats that public filter as a defense in depth. An enabled guest-visible RSVP section links token-scoped Guests to the individual RSVP flow. The Guide parser still strips private meal and response notes; see [Guest Invitation and RSVP V1](guest-invitation-rsvp.md).
 
 ## Publication and preview
 
@@ -28,7 +28,7 @@ The Guide displays title, Wedding context, eligible intro/custom sections, guest
 
 Queried the six exact Stitch screens: Invitation / Website Editor (`34734c9d38064818b0345ea04f48c6c5`), Website Sections & Visibility (`40ccf6e508c044c4b642b39e185ea2a8`), Template Gallery (`03964055b9864036ace57eb7a51fc725`), Preview & Publish (`7d0bb3d1cca64d97be9babc32ad866f0`), Personalized Guest Wedding Guide (`7a148a1efc6f450f8e9d60a3e49d0b61`), and Guest Wedding Invitation (`8ddd56bf814c458ca5614d05a25663e5`). Warm Editorial Nuptial supplies the ivory canvas, Playfair headings, Plus Jakarta Sans body, sage actions, champagne accents, rounded cards, and mobile gutters. The Stitch MCP returned transient screenshot/HTML URLs rather than inline assets; download was blocked in this environment and no browser was available, so pixel-level visual comparison remains deferred.
 
-Intentional changes from the references: the gallery uses typographic color studies instead of unbundled imagery; publication and invitation delivery have distinct actions; the planner draft preview clearly labels hidden/unpublished content; the guest invitation's RSVP action is postponed to the dedicated RSVP slice; and the dedicated Pass page remains the QR surface. Actual Wedding data replaces reference examples; Juan & Maria is the canonical demo couple only in tests and documentation.
+Intentional changes from the references: the gallery uses typographic color studies instead of unbundled imagery; publication and invitation delivery have distinct actions; the planner draft preview clearly labels hidden/unpublished content; token-scoped RSVP uses a dedicated individual Guest flow; and the dedicated Pass page remains the QR surface. Actual Wedding data replaces reference examples; Juan & Maria is the canonical demo couple only in tests and documentation.
 
 ## Verification and Deferred physical QA
 
@@ -38,4 +38,4 @@ Client tests cover slug shape/collision mapping, five templates, role gating, co
 
 ## Recommended next slice
 
-Implement token-scoped individual Guest RSVP submission and confirmation on the canonical web route, with Household isolation and separate invitation-delivery tracking.
+Complete core V1 integration and then run physical QA for the invitation and RSVP guest routes.

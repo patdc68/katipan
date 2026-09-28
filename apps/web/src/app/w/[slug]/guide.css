@@ -28,3 +28,142 @@
 .guide-plain-list { padding-left:20px; line-height:1.8; }.guide-message { margin-top:18vh; text-align:center; }.guide-footer { padding:42px 0 8px; text-align:center; color:var(--guide-accent); font-size:10px; font-weight:700; letter-spacing:.15em; }
 .guide-nav a:focus-visible,.guide-action:focus-visible { outline:3px solid var(--guide-accent); outline-offset:3px; }
 @media (max-width:560px) { .guide-hero { padding-top:50px; }.guide-card { padding:26px 20px; }.guide-program-item { grid-template-columns:1fr; gap:4px; } }
+
+.guest-route-nav {
+  display:flex;
+  gap:8px;
+  width:min(720px,calc(100% - 40px));
+  margin:0 auto 20px;
+  padding-bottom:8px;
+  overflow-x:auto;
+}
+.guest-route-nav a {
+  flex:0 0 auto;
+  padding:10px 15px;
+  border:1px solid var(--guide-line,#e7e2da);
+  border-radius:999px;
+  background:var(--guide-card,#fdfbf7);
+  color:var(--guide-ink,#1e1b19);
+  font-size:12px;
+  text-decoration:none;
+}
+.guest-route-nav a[aria-current="page"] { border-color:var(--guide-accent,#60725a); font-weight:700; }
+.guest-flow-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:12px; margin-top:22px; }
+.guest-flow-actions .guide-action { margin:0; }
+.guest-secondary-action {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:48px;
+  padding:12px 22px;
+  border:1px solid var(--guide-line,#e7e2da);
+  border-radius:12px;
+  background:var(--guide-card,#fdfbf7);
+  color:var(--guide-ink,#1e1b19);
+  font:inherit;
+  font-weight:700;
+  text-align:center;
+  text-decoration:none;
+  cursor:pointer;
+}
+.guest-secondary-action:disabled { opacity:.55; cursor:not-allowed; }
+.guest-text-action { color:var(--guide-accent,#60725a); font-weight:700; }
+.guest-invitation-hero { padding-bottom:36px; }
+.guest-invitation-copy { max-width:36rem; margin:0 auto; font-family:var(--font-playfair-display),Georgia,serif; font-size:18px; font-style:italic; line-height:1.7; }
+.guest-invitation-household h2,.guest-invitation-actions h2 { margin-top:0; }
+.guest-invitation-guest-list,.guest-confirmation-list { display:grid; gap:0; margin:20px 0 0; padding:0; list-style:none; }
+.guest-invitation-guest-list li,.guest-confirmation-list li {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:16px 0;
+  border-top:1px solid var(--guide-line);
+}
+.guest-invitation-status { color:var(--guide-accent); font-size:13px; text-transform:capitalize; }
+.guest-rsvp-access-note { display:grid; justify-items:center; gap:8px; }
+.guest-rsvp-access-note p { max-width:30rem; margin:0; color:var(--guide-ink); font-size:13px; text-align:center; }
+.guest-rsvp-access-note button { min-width:150px; }
+.guest-rsvp-shell { padding-bottom:48px; }
+.guest-rsvp-hero { padding-bottom:30px; }
+.guest-rsvp-hero > p:last-child { margin-bottom:0; }
+.guest-rsvp-wedding-title { font-family:var(--font-playfair-display),Georgia,serif; font-size:18px; }
+.guest-rsvp-form { display:grid; gap:18px; }
+.guest-rsvp-progress { padding:22px 24px; text-align:center; }
+.guest-rsvp-progress p { margin:6px 0; }
+.guest-rsvp-progress strong { font-size:18px; }
+.guest-rsvp-guest-list { display:grid; gap:18px; }
+.guest-rsvp-card { display:grid; gap:22px; }
+.guest-rsvp-card-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.guest-rsvp-card-heading h2 { margin:0; }
+.guest-rsvp-current-status { max-width:16rem; margin:2px 0 0; padding:9px 12px; border:1px solid var(--guide-line); border-radius:12px; font-size:12px; line-height:1.5; }
+.guest-rsvp-choices { min-width:0; margin:0; padding:0; border:0; }
+.guest-rsvp-choices legend { margin-bottom:12px; font-weight:700; }
+.guest-rsvp-choice-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.guest-rsvp-choice {
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-height:54px;
+  padding:12px 14px;
+  border:1px solid var(--guide-line);
+  border-radius:14px;
+  background:var(--guide-bg);
+  cursor:pointer;
+}
+.guest-rsvp-choice.is-selected { border-color:var(--guide-accent); font-weight:700; }
+.guest-rsvp-choice input { flex:0 0 auto; width:20px; height:20px; margin:0; accent-color:var(--guide-accent); }
+.guest-rsvp-fields { display:grid; gap:16px; }
+.guest-rsvp-field { display:grid; gap:7px; }
+.guest-rsvp-field label { font-size:13px; font-weight:700; }
+.guest-rsvp-field label span { font-weight:400; opacity:.7; }
+.guest-rsvp-field input,.guest-rsvp-field textarea {
+  width:100%;
+  box-sizing:border-box;
+  padding:13px 14px;
+  border:1px solid var(--guide-line);
+  border-radius:12px;
+  background:var(--guide-card);
+  color:var(--guide-ink);
+  font:inherit;
+  line-height:1.5;
+}
+.guest-rsvp-field textarea { resize:vertical; }
+.guest-rsvp-field input:focus-visible,.guest-rsvp-field textarea:focus-visible,.guest-rsvp-choice input:focus-visible {
+  outline:3px solid var(--guide-accent);
+  outline-offset:3px;
+}
+.guest-rsvp-decline-note,.guest-rsvp-feedback { margin:0; line-height:1.6; }
+.guest-rsvp-feedback { padding:12px 14px; border:1px solid var(--guide-line); border-radius:12px; }
+.guest-rsvp-feedback.is-error { border-color:#ba1a1a; background:#ffdad6; color:#690005; }
+.guest-rsvp-feedback.is-saved { color:var(--guide-accent); font-weight:700; }
+.guest-rsvp-submit { justify-self:start; margin:0; }
+.guest-rsvp-review { display:grid; justify-items:center; gap:12px; margin-top:10px; text-align:center; }
+.guest-rsvp-review p { margin:0; }
+.guest-confirmation-hero { padding-bottom:28px; }
+.guest-confirmation-mark {
+  display:grid;
+  place-items:center;
+  width:66px;
+  height:66px;
+  margin:22px auto;
+  border:1px solid var(--guide-accent);
+  border-radius:50%;
+  color:var(--guide-accent);
+  font-size:31px;
+  line-height:1;
+}
+.guest-rsvp-summary h2 { margin-top:0; }
+.guest-confirmation-list strong { font-size:13px; text-align:right; }
+.guest-confirmation-actions { margin:22px auto; }
+.guest-route-nav a:focus-visible,.guest-secondary-action:focus-visible,.guest-text-action:focus-visible {
+  outline:3px solid var(--guide-accent,#60725a);
+  outline-offset:3px;
+}
+@media (max-width:560px) {
+  .guest-rsvp-card-heading { display:grid; }
+  .guest-rsvp-current-status { max-width:none; }
+  .guest-rsvp-choice-list { grid-template-columns:1fr; }
+  .guest-rsvp-submit,.guest-flow-actions > a { width:100%; box-sizing:border-box; }
+  .guest-invitation-guest-list li,.guest-confirmation-list li { align-items:flex-start; }
+}

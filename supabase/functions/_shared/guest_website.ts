@@ -46,7 +46,7 @@ export function createGuestWebsiteHandler(
     }
     if (mode === "rsvp" &&
       (typeof token !== "string" || typeof body.guestId !== "string" || !uuidPattern.test(body.guestId) ||
-        !["ATTENDING", "DECLINED", "NO_RESPONSE"].includes(String(body.status)) ||
+        !["ATTENDING", "DECLINED"].includes(String(body.status)) ||
         [body.mealChoice, body.dietaryNotes, body.responseNotes].some((v) => v !== undefined && (typeof v !== "string" || v.length > 2000)))) {
       return json({ error: "Invalid request" }, 400, origin);
     }

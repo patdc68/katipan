@@ -1,5 +1,7 @@
 import GuestPassSwitcher from "./guest-pass-switcher";
 import { isHouseholdInvitationToken, loadGuestPassGuide } from "../../../../lib/guest-pass-guide";
+import { GuestRouteNav } from "../guest-route-nav";
+import "../guide.css";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -45,11 +47,14 @@ export default async function GuestPassPage({ params, searchParams }: PageProps)
   }
 
   return (
-    <GuestPassSwitcher
-      weddingName={result.guide.weddingName}
-      weddingDate={result.guide.weddingDate}
-      websiteTitle={result.guide.websiteTitle}
-      passes={result.guide.passes}
-    />
+    <>
+      <GuestRouteNav slug={slug} token={invitationToken} current="/pass" routes={["", "/invitation", "/rsvp", "/rsvp/confirmation"]} />
+      <GuestPassSwitcher
+        weddingName={result.guide.weddingName}
+        weddingDate={result.guide.weddingDate}
+        websiteTitle={result.guide.websiteTitle}
+        passes={result.guide.passes}
+      />
+    </>
   );
 }
