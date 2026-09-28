@@ -19,6 +19,15 @@ export type HouseholdProgressStatus = Database["public"]["Enums"]["household_rsv
 
 export type GuestSeatingSummary = { guestId: string; eventName: string; tableName: string; hasSeat: boolean; seatLabel: string | null };
 export type GuestEntourageSummary = { guestId: string; roleName: string };
+export type GuestPass = {
+  id: string;
+  guestId: string;
+  reference: string;
+  qrPayload: string;
+  issuedAt: string;
+  revokedAt: null;
+};
+export type GuestPassPrimaryAction = "ISSUE" | "ROTATE" | null;
 
 export type GuestWorkspaceData = {
   weddingId: string;
@@ -132,6 +141,89 @@ export function canManageGuestDomain(membership: WorkspaceMembership | null | un
     && membership.weddingId === membership.wedding.id
     && (membership.role === "OWNER" || membership.role === "FULL_COORDINATOR" || membership.role === "GUEST_COORDINATOR"),
   );
+}
+
+/** Guest Pass permissions are intentionally narrower than Guest-domain permissions. */
+export function canManageGuestPass(membership: WorkspaceMembership | null | undefined): boolean {
+  return Boolean(
+    membership
+    && membership.status === "ACTIVE"
+    && membership.weddingId === membership.wedding.id
+    && (membership.role === "OWNER" || membership.role === "FULL_COORDINATOR"),
+  );
+}
+
+export function guestPassActionState(
+  status: GuestRsvpStatus,
+  pass: GuestPass | null,
+  priorPassWasRevoked: boolean,
+): { primaryAction: GuestPassPrimaryAction; canPreview: boolean; canRevoke: boolean; canReplace: boolean } {
+  if (status !== "ATTENDING") {
+    return { primaryAction: null, canPreview: false, canRevoke: pass !== null, canReplace: false };
+  }
+  if (pass) {
+    return { primaryAction: null, canPreview: true, canRevoke: true, canReplace: true };
+  }
+  return {
+    primaryAction: priorPassWasRevoked ? "ROTATE" : "ISSUE",
+    canPreview: false,
+    canRevoke: false,
+    canReplace: false,
+  };
+}
+
+export function parseGuestPassPayload(value: unknown, expectedGuestId: string): GuestPass {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Guest Pass response unavailable.");
+  }
+  const pass = value as Record<string, unknown>;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (typeof pass.id !== "string" || !uuidPattern.test(pass.id)
+    || pass.guestId !== expectedGuestId
+    || typeof pass.reference !== "string" || !/^K[0-9A-F]{4}-[0-9A-F]{4}$/.test(pass.reference)
+    || typeof pass.qrPayload !== "string" || !/^[0-9a-f]{64}$/.test(pass.qrPayload)
+    || typeof pass.issuedAt !== "string" || !Number.isFinite(Date.parse(pass.issuedAt))
+    || (pass.revokedAt !== null && pass.revokedAt !== undefined)) {
+    throw new Error("Guest Pass response unavailable.");
+  }
+  return {
+    id: pass.id,
+    guestId: expectedGuestId,
+    reference: pass.reference,
+    qrPayload: pass.qrPayload,
+    issuedAt: pass.issuedAt,
+    revokedAt: null,
+  };
+}
+
+function guestPassErrorDetails(error: unknown): { code: string; message: string } {
+  if (!error || typeof error !== "object") return { code: "", message: "" };
+  const record = error as Record<string, unknown>;
+  return {
+    code: typeof record.code === "string" ? record.code : "",
+    message: typeof record.message === "string" ? record.message : "",
+  };
+}
+
+export function isRevokedGuestPassError(error: unknown): boolean {
+  const details = guestPassErrorDetails(error);
+  return details.code === "23514" && details.message.includes("A revoked Pass requires explicit rotation");
+}
+
+export function safeGuestPassError(error: unknown): string {
+  const { code, message } = guestPassErrorDetails(error);
+  if (code === "42501") return "Guest Pass management isn't available for this account.";
+  if (code === "22023" || code === "P0002") return "This Guest isn't available in the selected Wedding.";
+  if (code === "23514" && message.includes("A revoked Pass requires explicit rotation")) {
+    return "This Guest's previous Pass was revoked. Rotate it explicitly to create a replacement.";
+  }
+  if (code === "23514" && message.includes("No prior Pass exists to rotate")) {
+    return "No prior Pass was found. Issue a new Guest Pass instead.";
+  }
+  if (code === "23514" && message.includes("Only an ATTENDING Guest may receive a Pass")) {
+    return "This Guest must be marked Attending before a Pass can be issued or rotated. RSVP remains unchanged.";
+  }
+  return "We couldn't load or update this Guest Pass. Try again.";
 }
 
 export function canViewGuestNotes(membership: WorkspaceMembership | null | undefined): boolean {
