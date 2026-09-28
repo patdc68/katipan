@@ -1,0 +1,347 @@
+:root {
+  color-scheme: light;
+  --surface: #fff8f5;
+  --surface-card: #fdfbf7;
+  --surface-soft: #f4ece8;
+  --ink: #1e1b19;
+  --muted: #5c5b56;
+  --sage: #60725a;
+  --sage-dark: #485943;
+  --gold: #c5a059;
+  --line: #e7e2da;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-plus-jakarta-sans), Arial, sans-serif;
+}
+
+button {
+  font: inherit;
+}
+
+.guest-pass-page {
+  min-height: 100vh;
+  padding: 28px 20px 56px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(216, 199, 168, 0.15), transparent 36rem),
+    var(--surface);
+}
+
+.guest-pass-branding,
+.guest-pass-content {
+  width: min(100%, 560px);
+  margin-inline: auto;
+}
+
+.guest-pass-branding {
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+.guest-pass-kicker,
+.guest-pass-eyebrow {
+  margin: 0;
+  color: #775a19;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.guest-pass-wedding-name {
+  margin: 12px 0 3px;
+  font-family: var(--font-playfair-display), Georgia, serif;
+  font-size: clamp(25px, 7vw, 34px);
+  font-weight: 600;
+  line-height: 1.16;
+}
+
+.guest-pass-date,
+.guest-pass-site-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.guest-pass-heading {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.guest-pass-heading h1,
+.guest-pass-message h1 {
+  margin: 8px 0 0;
+  font-family: var(--font-playfair-display), Georgia, serif;
+  font-size: clamp(28px, 8vw, 36px);
+  font-weight: 600;
+  line-height: 1.18;
+}
+
+.guest-pass-site-title {
+  margin-top: 10px;
+}
+
+.guest-pass-switcher {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.guest-pass-switcher legend {
+  margin-bottom: 9px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.guest-pass-switcher-options {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 1px 6px;
+}
+
+.guest-pass-choice {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 10px 17px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.guest-pass-choice.is-selected {
+  border-color: var(--sage);
+  background: #e9eee5;
+  color: var(--sage-dark);
+  font-weight: 700;
+}
+
+.guest-pass-choice:focus-visible,
+.guest-pass-print-button:focus-visible {
+  outline: 3px solid rgba(197, 160, 89, 0.55);
+  outline-offset: 3px;
+}
+
+.guest-pass-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 20px;
+  overflow: hidden;
+  border: 1px solid rgba(197, 160, 89, 0.55);
+  border-radius: 24px;
+  background: var(--surface-card);
+  box-shadow: 0 8px 32px -4px rgba(28, 25, 23, 0.06), 0 2px 8px -2px rgba(197, 160, 89, 0.08);
+}
+
+.guest-pass-holder {
+  width: 100%;
+  text-align: center;
+}
+
+.guest-pass-holder h2 {
+  margin: 5px 0 0;
+  font-family: var(--font-playfair-display), Georgia, serif;
+  font-size: clamp(25px, 7vw, 31px);
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.guest-pass-qr-frame {
+  display: grid;
+  place-items: center;
+  max-width: 100%;
+  padding: 16px;
+  border: 1px solid #f0ede8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.guest-pass-qr-frame svg {
+  display: block;
+  width: min(264px, calc(100vw - 112px));
+  height: auto;
+}
+
+.guest-pass-reference {
+  width: 100%;
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--surface-soft);
+  text-align: center;
+}
+
+.guest-pass-reference-value {
+  margin: 7px 0 4px;
+  color: var(--sage-dark);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
+}
+
+.guest-pass-reference-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.guest-pass-seating {
+  width: 100%;
+  margin-top: 16px;
+  padding: 20px 22px;
+  border-radius: 18px;
+  background: var(--sage-dark);
+  color: #fff;
+}
+
+.guest-pass-seating-label {
+  margin: 0;
+  color: #f2dfb6;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.guest-pass-seating .guest-pass-seating-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.guest-pass-seating-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 12px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+}
+
+.guest-pass-seating-row strong {
+  color: #fff;
+  font-weight: 600;
+  text-align: right;
+}
+
+.guest-pass-guidance {
+  max-width: 390px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.guest-pass-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.guest-pass-print-button {
+  min-height: 48px;
+  padding: 12px 22px;
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  border-radius: 999px;
+  background: var(--sage);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.guest-pass-print-button:hover {
+  background: #505f4b;
+}
+
+.guest-pass-switch-hint {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.guest-pass-message-page {
+  display: grid;
+  place-items: center;
+}
+
+.guest-pass-message {
+  width: min(100%, 460px);
+  padding: 36px 28px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface-card);
+  text-align: center;
+}
+
+.guest-pass-message h1 {
+  margin-top: 12px;
+}
+
+.guest-pass-message p:last-child {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (min-width: 640px) {
+  .guest-pass-page {
+    padding-top: 42px;
+  }
+
+  .guest-pass-card {
+    padding: 36px;
+  }
+}
+
+@media print {
+  :root,
+  body {
+    background: #fff !important;
+  }
+
+  .guest-pass-page {
+    min-height: auto;
+    padding: 0;
+    background: #fff;
+  }
+
+  .guest-pass-branding {
+    margin-bottom: 18px;
+  }
+
+  .guest-pass-switcher,
+  .guest-pass-actions,
+  .guest-pass-switch-hint {
+    display: none !important;
+  }
+
+  .guest-pass-card {
+    border: 1px solid #d8c7a8;
+    box-shadow: none;
+  }
+
+  .guest-pass-seating {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

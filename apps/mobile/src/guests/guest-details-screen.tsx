@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Modal, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import QRCode from "react-native-qrcode-svg";
 import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipan/ui";
 import {
   addGuestToGroup,
@@ -12,10 +13,12 @@ import {
   setGuestRsvp,
   updateGuestAllowance,
 } from "./api";
+import { getGuestPass, issueGuestPass, revokeGuestPass, rotateGuestPass } from "./guest-pass-api";
 import { AllowanceCard, AllowanceForm } from "./allowance-components";
 import { GuestFilterChip } from "./components";
 import {
   buildGuestEntries,
+  canManageGuestPass,
   canManageGuestDomain,
   canViewGuestNotes,
   guestAllowanceLabel,
@@ -23,10 +26,14 @@ import {
   guestRsvpLabel,
   guestRsvpStatus,
   guestRsvpStatuses,
+  guestPassActionState,
+  isRevokedGuestPassError,
+  safeGuestPassError,
   safeGuestError,
   SingleSubmitGate,
   type GuestEntry,
   type GuestAllowanceDraft,
+  type GuestPass,
   type GuestWorkspaceData,
 } from "./model";
 import { useGuestWorkspace } from "./use-guest-workspace";
@@ -218,6 +225,13 @@ function GuestDetailsContent({
         </EditorialCard>
       </View>
 
+      <GuestPassManagementSection
+        membership={membership}
+        guestId={entry.guest.id}
+        guestName={guestName(entry)}
+        rsvpStatus={rsvpStatus}
+      />
+
       <View style={styles.section}>
         <SectionHeader
           title="Guest groups"
@@ -375,6 +389,183 @@ function GuestDetailsContent({
   );
 }
 
+function GuestPassManagementSection({
+  membership,
+  guestId,
+  guestName: displayName,
+  rsvpStatus,
+}: {
+  membership: WorkspaceMembership;
+  guestId: string;
+  guestName: string;
+  rsvpStatus: (typeof guestRsvpStatuses)[number];
+}) {
+  const canManage = canManageGuestPass(membership);
+  const passActionGate = useRef(new SingleSubmitGate());
+  const [pass, setPass] = useState<GuestPass | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [priorPassWasRevoked, setPriorPassWasRevoked] = useState(false);
+  const [confirmingAction, setConfirmingAction] = useState<"REVOKE" | "ROTATE" | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!canManage) return () => { cancelled = true; };
+    void getGuestPass(membership, guestId)
+      .then((current) => { if (!cancelled) setPass(current); })
+      .catch((cause: unknown) => { if (!cancelled) setLoadError(safeGuestPassError(cause)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [canManage, guestId, membership, reloadKey]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setLoadError(null);
+    setReloadKey((key) => key + 1);
+  };
+
+  const runAction = async (action: () => Promise<void>) => passActionGate.current.run(async () => {
+    if (busy) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await action();
+    } catch (cause) {
+      if (isRevokedGuestPassError(cause)) setPriorPassWasRevoked(true);
+      setActionError(safeGuestPassError(cause));
+    } finally {
+      setBusy(false);
+    }
+  });
+  const actions = guestPassActionState(rsvpStatus, pass, priorPassWasRevoked);
+  const issue = () => runAction(async () => {
+    const created = await issueGuestPass(membership, guestId);
+    setPass(created);
+    setPriorPassWasRevoked(false);
+  });
+  const revoke = () => runAction(async () => {
+    await revokeGuestPass(membership, guestId);
+    setPass(null);
+    setPriorPassWasRevoked(true);
+    setConfirmingAction(null);
+    setPreviewOpen(false);
+  });
+  const rotate = () => runAction(async () => {
+    const replacement = await rotateGuestPass(membership, guestId);
+    setPass(replacement);
+    setPriorPassWasRevoked(false);
+    setConfirmingAction(null);
+    setPreviewOpen(false);
+  });
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title="Guest Pass" description="One Pass belongs to this individual Guest. RSVP and seating remain separate." />
+      <EditorialCard style={styles.guestPassCard}>
+        {!canManage ? (
+          <KatipanText color="textMuted">Guest Pass management is available to an active Owner or Full Coordinator.</KatipanText>
+        ) : loading ? (
+          <View style={styles.passLoading}>
+            <ActivityIndicator color={c.primary} />
+            <KatipanText color="textMuted">Checking this Guest&apos;s Pass…</KatipanText>
+          </View>
+        ) : loadError ? (
+          <>
+            <KatipanText accessibilityRole="alert" color="error">{loadError}</KatipanText>
+            <KatipanButton label="Try again" variant="secondary" disabled={busy} onPress={retryLoad} />
+          </>
+        ) : (
+          <>
+            {rsvpStatus !== "ATTENDING" && (
+              <KatipanText color="textMuted">
+                This Guest must be Attending before a Pass can be issued or rotated. RSVP stays separate and will not change here.
+              </KatipanText>
+            )}
+            {pass && (
+              <View style={styles.passSummary}>
+                <View style={styles.passHeading}>
+                  <View style={styles.passCopy}>
+                    <KatipanText variant="title">Active Guest Pass</KatipanText>
+                    <KatipanText variant="bodySmall" color="textMuted">For {displayName}</KatipanText>
+                  </View>
+                  <StatusChip label="Active" tone="success" />
+                </View>
+                <DetailLine label="Reference" value={pass.reference} />
+                <DetailLine label="Issued" value={new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(new Date(pass.issuedAt))} />
+                {rsvpStatus === "ATTENDING" ? (
+                  <View style={styles.passActionRow}>
+                    <KatipanButton label="Preview Pass" variant="secondary" disabled={busy} onPress={() => setPreviewOpen(true)} />
+                    <KatipanButton label="Revoke Pass" variant="text" disabled={busy} onPress={() => setConfirmingAction("REVOKE")} />
+                    <KatipanButton label="Rotate Pass" variant="text" disabled={busy} onPress={() => setConfirmingAction("ROTATE")} />
+                  </View>
+                ) : (
+                  <KatipanButton label="Revoke Pass" variant="secondary" disabled={busy} onPress={() => setConfirmingAction("REVOKE")} />
+                )}
+              </View>
+            )}
+            {!pass && rsvpStatus === "ATTENDING" && actions.primaryAction === "ISSUE" && (
+              <KatipanButton label="Issue Guest Pass" loading={busy} onPress={() => void issue()} />
+            )}
+            {!pass && rsvpStatus === "ATTENDING" && actions.primaryAction === "ROTATE" && (
+              <KatipanButton label="Rotate Guest Pass" loading={busy} onPress={() => setConfirmingAction("ROTATE")} />
+            )}
+            {!pass && rsvpStatus === "ATTENDING" && !priorPassWasRevoked && !actionError && (
+              <KatipanText variant="bodySmall" color="textMuted">Issuing a Pass does not change RSVP or Seating. Reopening this screen will show the same active Pass.</KatipanText>
+            )}
+            {!!actionError && <KatipanText accessibilityRole="alert" color="error">{actionError}</KatipanText>}
+            {confirmingAction && (
+              <View style={styles.passConfirmation}>
+                <KatipanText variant="title">
+                  {confirmingAction === "REVOKE" ? "Revoke this Guest Pass?" : "Rotate this Guest Pass?"}
+                </KatipanText>
+                <KatipanText variant="bodySmall" color="textMuted">
+                  {confirmingAction === "REVOKE"
+                    ? "The current QR will stop working. RSVP, Seating, and Guest identity will stay unchanged."
+                    : "The current QR will be invalidated and a new Pass issued for this Guest. RSVP and Seating will stay unchanged."}
+                </KatipanText>
+                <View style={styles.passActionRow}>
+                  <KatipanButton label="Cancel" variant="secondary" disabled={busy} onPress={() => setConfirmingAction(null)} />
+                  <KatipanButton
+                    label={confirmingAction === "REVOKE" ? "Confirm revoke" : "Confirm rotation"}
+                    loading={busy}
+                    onPress={() => void (confirmingAction === "REVOKE" ? revoke() : rotate())}
+                  />
+                </View>
+              </View>
+            )}
+          </>
+        )}
+      </EditorialCard>
+      {pass && actions.canPreview && (
+        <Modal visible={previewOpen} transparent animationType="fade" onRequestClose={() => setPreviewOpen(false)}>
+          <View style={styles.passModalBackdrop}>
+            <View style={styles.passModalCard}>
+              <KatipanText variant="labelCaps" color="secondary">GUEST PASS PREVIEW</KatipanText>
+              <KatipanText variant="headlineMedium" accessibilityRole="header">{displayName}</KatipanText>
+              <View style={styles.passQrQuietZone} accessible accessibilityLabel={`QR code for ${displayName}`}>
+                <QRCode
+                  value={pass.qrPayload}
+                  size={248}
+                  quietZone={16}
+                  ecl="H"
+                  color="#1E1B19"
+                  backgroundColor="#FFFFFF"
+                />
+              </View>
+              <KatipanText variant="labelLarge">{pass.reference}</KatipanText>
+              <KatipanButton label="Close preview" variant="secondary" onPress={() => setPreviewOpen(false)} />
+            </View>
+          </View>
+        </Modal>
+      )}
+    </View>
+  );
+}
+
 function GuestRsvpHeader({ status }: { status: (typeof guestRsvpStatuses)[number] }) {
   const tone = status === "ATTENDING" ? "success" : status === "DECLINED" ? "error" : "warning";
   return <StatusChip label={guestRsvpLabel(status)} tone={tone} />;
@@ -398,6 +589,16 @@ const styles = StyleSheet.create({
   section: { gap: s.medium },
   detailsCard: { gap: s.medium },
   rsvpCard: { gap: s.medium, padding: s.medium },
+  guestPassCard: { gap: s.medium, padding: s.medium },
+  passLoading: { flexDirection: "row", alignItems: "center", gap: s.small },
+  passSummary: { gap: s.medium },
+  passHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: s.medium },
+  passCopy: { flex: 1, gap: s.micro },
+  passActionRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: s.small },
+  passConfirmation: { gap: s.small, padding: s.medium, borderRadius: 16, backgroundColor: c.surfaceLow },
+  passModalBackdrop: { flex: 1, justifyContent: "center", padding: s.medium, backgroundColor: "rgba(30, 27, 25, 0.48)" },
+  passModalCard: { alignItems: "center", gap: s.medium, padding: s.medium, borderRadius: 24, backgroundColor: c.surface },
+  passQrQuietZone: { alignItems: "center", justifyContent: "center", padding: 16, borderRadius: 12, backgroundColor: "#FFFFFF" },
   statusRow: { flexDirection: "row", flexWrap: "wrap", gap: s.small },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: s.small },
   detailLine: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: s.medium },
