@@ -62,6 +62,13 @@ function itemRoute(weddingId: string, itemId: string): Href {
   } as unknown as Href;
 }
 
+function supplierRoute(weddingId: string, supplierId: string): Href {
+  return {
+    pathname: "/(wedding)/[weddingId]/budget/suppliers/[supplierId]",
+    params: { weddingId, supplierId },
+  } as unknown as Href;
+}
+
 function newItemRoute(weddingId: string, categoryId?: string): Href {
   return {
     pathname: "/(wedding)/[weddingId]/budget/items/new",
@@ -144,6 +151,8 @@ function ItemRow({
   currency,
   onPress,
   supplierLabel,
+  supplierId,
+  onSupplierPress,
 }: {
   name: string;
   categoryName: string;
@@ -153,15 +162,17 @@ function ItemRow({
   currency: string;
   onPress: () => void;
   supplierLabel?: string | null;
+  supplierId?: string | null;
+  onSupplierPress?: () => void;
 }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${name}`} onPress={onPress}>
-      <EditorialCard style={styles.itemCard}>
+    <EditorialCard style={styles.itemCard}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Open Budget Item ${name}`} onPress={onPress} style={styles.itemPressable}>
         <View style={styles.itemHeading}>
           <View style={styles.itemNameBlock}>
             <KatipanText variant="title">{name}</KatipanText>
             <KatipanText variant="bodySmall" color="textMuted">{categoryName}</KatipanText>
-            {supplierLabel && <KatipanText variant="bodySmall" color="secondary">Supplier · {supplierLabel}</KatipanText>}
+            {supplierLabel && supplierId && <KatipanText variant="bodySmall" color="secondary">Supplier · {supplierLabel}</KatipanText>}
           </View>
           <StatusBadge status={status} />
         </View>
@@ -169,8 +180,11 @@ function ItemRow({
           <MoneyPair label="ESTIMATED" amount={estimated} currency={currency} />
           <MoneyPair label="ACTUAL" amount={actual} currency={currency} />
         </View>
-      </EditorialCard>
-    </Pressable>
+      </Pressable>
+      {supplierLabel && supplierId && onSupplierPress && (
+        <KatipanButton label="View Supplier Details" variant="text" onPress={onSupplierPress} />
+      )}
+    </EditorialCard>
   );
 }
 
@@ -226,6 +240,8 @@ export function BudgetDashboardScreen() {
         {totals.actualTotal === 0 && <KatipanText variant="bodySmall" color="textMuted">No actual spending has been recorded yet.</KatipanText>}
       </EditorialCard>
 
+      <KatipanButton label="Manage Suppliers" variant="secondary" onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/budget/suppliers", params: { weddingId: resource.weddingId } } as unknown as Href)} />
+
       <View style={styles.section}>
         <SectionHeader
           title="Budget Categories"
@@ -261,7 +277,10 @@ export function BudgetDashboardScreen() {
             estimated={item.estimated_amount}
             actual={item.actualTotal}
             currency={totals.currencyCode}
+            supplierId={item.supplier_id}
+            supplierLabel={item.supplierLabel}
             onPress={() => router.push(itemRoute(resource.weddingId, item.id))}
+            onSupplierPress={item.supplier_id ? () => router.push(supplierRoute(resource.weddingId, item.supplier_id ?? "")) : undefined}
           />
         ))}
       </View>
@@ -469,12 +488,14 @@ export function BudgetCategoryScreen() {
           key={item.id}
           name={item.name}
           categoryName={category.name}
-          supplierLabel={item.supplierLabel}
           status={item.status}
           estimated={item.estimated_amount}
           actual={item.actualTotal}
           currency={totals.currencyCode}
+          supplierId={item.supplier_id}
+          supplierLabel={item.supplierLabel}
           onPress={() => router.push(itemRoute(resource.weddingId, item.id))}
+          onSupplierPress={item.supplier_id ? () => router.push(supplierRoute(resource.weddingId, item.supplier_id ?? "")) : undefined}
         />)}
         {historyItems.length > 0 && <>
           <SectionHeader title="History" eyebrow="CANCELLED & ARCHIVED" />
@@ -482,12 +503,14 @@ export function BudgetCategoryScreen() {
             key={item.id}
             name={item.name}
             categoryName={category.name}
-            supplierLabel={item.supplierLabel}
             status={item.status}
             estimated={item.estimated_amount}
             actual={item.actualTotal}
             currency={totals.currencyCode}
+            supplierId={item.supplier_id}
+            supplierLabel={item.supplierLabel}
             onPress={() => router.push(itemRoute(resource.weddingId, item.id))}
+            onSupplierPress={item.supplier_id ? () => router.push(supplierRoute(resource.weddingId, item.supplier_id ?? "")) : undefined}
           />)}
         </>}
       </View>
@@ -516,6 +539,7 @@ const styles = StyleSheet.create({
   categoryCardHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: s.small },
   categoryName: { flex: 1 },
   itemCard: { gap: s.medium },
+  itemPressable: { gap: s.medium },
   itemHeading: { flexDirection: "row", alignItems: "flex-start", gap: s.small },
   itemNameBlock: { flex: 1, gap: s.micro },
   itemMoneyRow: { flexDirection: "row", gap: s.medium },
