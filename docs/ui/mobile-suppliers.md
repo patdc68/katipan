@@ -9,7 +9,7 @@ This slice queries the **Warm Editorial Nuptial** design system and these Stitch
 - Budget Dashboard — `9b1a1de7722f49fa948b5b90a90fb384`
 - Category Details & Expenses — `5fcef1d558b94455a18d05b6ea20c303`
 
-The screens were retrieved as mobile Stitch records. The shared implementation uses the existing Warm Editorial tokens: Playfair Display headings, Plus Jakarta Sans operational text, ivory surfaces, sage actions, gold accents, rounded cards, 20 px page margins and 24 px primary card corners.
+The four mobile Stitch records were queried. Stitch returned external screenshot and HTML URLs, but this environment could not retrieve those assets for a visual comparison. The implementation follows the local Warm Editorial source-of-truth tokens and existing mobile Budget composition: Playfair Display headings, Plus Jakarta Sans operational text, ivory surfaces, sage actions, gold accents, rounded cards, 20 px page margins and 24 px primary card corners. A direct per-screen visual comparison remains outstanding.
 
 ## Routes and navigation
 
