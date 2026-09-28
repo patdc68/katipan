@@ -76,6 +76,8 @@ export function MoreScreen() {
           <KatipanText variant="labelCaps" color="secondary">WEDDING WEBSITE</KatipanText>
           <KatipanText variant="title">Guest Program</KatipanText>
           <KatipanText color="textMuted">Manage the schedule that guests see, separate from the operational Run of Show.</KatipanText>
+          <KatipanButton label="Open Wedding Website" variant="secondary"
+            onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/website", params: { weddingId: membership.weddingId } } as unknown as Href)} />
           <KatipanButton label="Open Guest Program" variant="secondary"
             onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/website/program", params: { weddingId: membership.weddingId } } as unknown as Href)} />
         </EditorialCard>

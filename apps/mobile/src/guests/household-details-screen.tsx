@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Share, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { colorTokens as c, spacingTokens as s } from "@katipan/ui";
 import {
@@ -23,6 +23,8 @@ import {
   SingleSubmitGate,
 } from "./model";
 import { useGuestWorkspace } from "./use-guest-workspace";
+import { issueHouseholdAccess, loadWebsite, revokeHouseholdAccess } from "../website/api";
+import { canManageWebsite } from "../website/model";
 import {
   EditorialCard,
   EmptyState,
@@ -47,6 +49,21 @@ export default function HouseholdDetailsScreen() {
   const [claimingGuestId, setClaimingGuestId] = useState<string | null>(null);
   const [allowanceEditor, setAllowanceEditor] = useState<string | "NEW" | null>(null);
   const [confirmingDeleteAllowanceId, setConfirmingDeleteAllowanceId] = useState<string | null>(null);
+  const [websiteInfo, setWebsiteInfo] = useState<{ weddingId: string; slug: string | null; published: boolean } | null>(null);
+  const websiteSlug = websiteInfo?.weddingId === weddingId ? websiteInfo.slug : null;
+  const websitePublished = websiteInfo?.weddingId === weddingId && websiteInfo.published;
+  const [issuedLink, setIssuedLink] = useState<{ weddingId: string; householdId: string; url: string } | null>(null);
+  const [confirmAccess, setConfirmAccess] = useState<"issue" | "revoke" | null>(null);
+  const [accessBusy, setAccessBusy] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const accessGate = useRef(new SingleSubmitGate());
+  useEffect(() => {
+    let alive = true;
+    if (membership && isCurrent) void loadWebsite(membership).then(value => {
+      if (alive) setWebsiteInfo({ weddingId: membership.weddingId, slug: value.site?.slug ?? null, published: value.site?.is_published ?? false });
+    }).catch(() => { if (alive) setWebsiteInfo(null); });
+    return () => { alive = false; };
+  }, [membership, isCurrent]);
 
   if (loading || (membership && !isCurrent)) return <KatipanScreen><LoadingState label="Loading Household details…" /></KatipanScreen>;
   if (!membership || !isCurrent) return <KatipanScreen><ErrorState title="Wedding workspace unavailable" description="Choose a Wedding you currently belong to." onRetry={() => router.replace("/(workspace)/weddings")} /></KatipanScreen>;
@@ -127,6 +144,45 @@ export default function HouseholdDetailsScreen() {
             ? <KatipanButton label="Reset to Not Sent" variant="secondary" loading={saving && !claimingAllowanceId} onPress={() => void runMutation(() => resetHouseholdInvitationDelivery(membership, household.id))} />
             : <KatipanButton label="Mark Invitation Sent" loading={saving && !claimingAllowanceId} onPress={() => void runMutation(() => markHouseholdInvitationSent(membership, household.id))} />)}
           <KatipanText variant="bodySmall" color="textMuted">This records delivery tracking only. It doesn&apos;t send an invitation or change any Guest&apos;s RSVP.</KatipanText>
+        </EditorialCard>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader title="Wedding website access" description="One Household invitation link opens the personalized Guest Guide. Creating a link does not send an invitation or change delivery status." />
+        <EditorialCard style={styles.deliveryCard}>
+          <KatipanText variant="labelCaps" color="secondary">HOUSEHOLD LINK</KatipanText>
+          <KatipanText color="textMuted">{websiteSlug ? `katipan.ph/w/${websiteSlug}` : "Create the Wedding website first."}</KatipanText>
+          {websiteSlug && !websitePublished && <KatipanText color="textMuted">The website is still a draft. A link will work after publication.</KatipanText>}
+          {canManageWebsite(membership) && websiteSlug && <>
+            {confirmAccess === null ? <View style={styles.actionRow}>
+              <KatipanButton label="Issue new access link" variant="secondary" disabled={accessBusy} onPress={() => setConfirmAccess("issue")} />
+              <KatipanButton label="Revoke Household access" variant="text" disabled={accessBusy} onPress={() => setConfirmAccess("revoke")} />
+            </View> : <>
+              <KatipanText variant="headlineSmall">{confirmAccess === "issue" ? "Issue a new link?" : "Revoke access?"}</KatipanText>
+              <KatipanText color="textMuted">{confirmAccess === "issue" ? "Any previous link for this Household will stop working. Share the new link intentionally." : "The old link will stop working. Guests, RSVP, seating and Guest Passes remain saved."}</KatipanText>
+              <View style={styles.actionRow}>
+                <KatipanButton label="Cancel" variant="secondary" onPress={() => setConfirmAccess(null)} />
+                <KatipanButton label={confirmAccess === "issue" ? "Confirm issue" : "Confirm revoke"} loading={accessBusy} onPress={() => void accessGate.current.run(async () => {
+                  setAccessBusy(true); setAccessError(null);
+                  try {
+                    if (confirmAccess === "issue") {
+                      const token = await issueHouseholdAccess(membership, householdId);
+                      setIssuedLink({ weddingId, householdId, url: `https://katipan.ph/w/${websiteSlug}?token=${token}` });
+                    } else { await revokeHouseholdAccess(membership, householdId); setIssuedLink(null); }
+                    setConfirmAccess(null);
+                  } catch { setAccessError("We couldn't change Household access. Refresh and try again."); }
+                  finally { setAccessBusy(false); }
+                })} />
+              </View>
+            </>}
+            {issuedLink?.weddingId === weddingId && issuedLink.householdId === householdId && <View style={styles.deliveryCard}>
+              <KatipanText variant="labelCaps" color="secondary">NEW LINK · SHOWN THIS SESSION ONLY</KatipanText>
+              <KatipanText selectable>{issuedLink.url}</KatipanText>
+              <KatipanButton label="Share link" variant="secondary" onPress={() => void Share.share({ message: issuedLink.url })} />
+              <KatipanButton label="Hide link" variant="text" onPress={() => setIssuedLink(null)} />
+            </View>}
+            {!!accessError && <KatipanText color="error">{accessError}</KatipanText>}
+          </>}
         </EditorialCard>
       </View>
 
