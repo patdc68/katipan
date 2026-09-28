@@ -1,0 +1,30 @@
+.guide-page { --guide-bg:#fff8f5; --guide-card:#fdfbf7; --guide-ink:#1e1b19; --guide-accent:#60725a; --guide-line:#e7e2da; min-height:100vh; background:var(--guide-bg); color:var(--guide-ink); }
+.guide-template-luntian { --guide-bg:#eff2e9; --guide-card:#fcfdf8; --guide-accent:#485943; --guide-line:#cbd5c5; }
+.guide-template-filipiniana { --guide-bg:#faf3e9; --guide-card:#fffbf4; --guide-accent:#775a19; --guide-line:#dcc9a9; }
+.guide-template-modern-love { --guide-bg:#f7f3f0; --guide-card:#fff; --guide-accent:#3e4841; --guide-line:#d8d2ce; }
+.guide-template-after-dark { --guide-bg:#242622; --guide-card:#343730; --guide-ink:#fff8f5; --guide-accent:#d9b879; --guide-line:#636557; }
+.guide-shell { max-width:760px; margin:auto; padding:0 20px 56px; }
+.guide-hero { padding:70px 12px 48px; text-align:center; }
+.guide-eyebrow { margin:0 0 11px; color:var(--guide-accent); font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
+.guide-ornament { color:var(--guide-accent); font-size:27px; margin:21px 0; }
+.guide-hero h1,.guide-card h1,.guide-card h2,.guide-card h3 { font-family:var(--font-playfair-display),Georgia,serif; font-weight:600; }
+.guide-hero h1 { margin:0; font-size:clamp(40px,10vw,68px); line-height:1.12; }
+.guide-date { margin:22px 0 8px; font-size:15px; letter-spacing:.08em; text-transform:uppercase; }
+.guide-muted { opacity:.7; }
+.guide-rule { width:82px; height:1px; background:var(--guide-accent); margin:28px auto 20px; }
+.guide-hero-note { font-family:var(--font-playfair-display),Georgia,serif; font-size:18px; font-style:italic; }
+.guide-nav { display:flex; gap:8px; overflow-x:auto; padding:0 0 20px; margin-bottom:4px; }
+.guide-nav a { flex:0 0 auto; padding:10px 15px; border:1px solid var(--guide-line); border-radius:999px; background:var(--guide-card); color:var(--guide-ink); font-size:12px; text-decoration:none; }
+.guide-content { display:grid; gap:20px; }
+.guide-card { padding:32px 28px; border:1px solid var(--guide-line); border-radius:24px; background:var(--guide-card); box-shadow:0 8px 32px -4px rgba(28,25,23,.045); }
+.guide-card h1 { font-size:34px; margin:0 0 12px; }.guide-card h2 { font-size:30px; margin:0 0 18px; }.guide-card h3 { font-size:20px; margin:0 0 7px; }
+.guide-card p { line-height:1.65; }.guide-card p:last-child { margin-bottom:0; }.guide-preserve { white-space:pre-wrap; }
+.guide-place-list,.guide-program { display:grid; gap:16px; }.guide-place { padding:18px 0; border-top:1px solid var(--guide-line); }.guide-place h3 { margin:0 0 6px; }
+.guide-program-item { display:grid; grid-template-columns:115px 1fr; gap:20px; padding:18px 0; border-top:1px solid var(--guide-line); }
+.guide-program-time { margin:0; color:var(--guide-accent); font-size:12px; font-weight:700; }.guide-program-item h3 { margin:0 0 5px; }.guide-program-item p { margin:4px 0; }
+.guide-swatches { margin:24px 0; }.guide-swatch-list { display:flex; flex-wrap:wrap; gap:9px; }.guide-swatch { display:inline-flex; align-items:center; gap:8px; padding:7px 11px; border:1px solid var(--guide-line); border-radius:999px; font-size:12px; }.guide-swatch-dot { width:19px; height:19px; border:1px solid rgba(0,0,0,.1); border-radius:50%; }
+.guide-attire { margin-top:24px; padding:22px; border-left:3px solid var(--guide-accent); background:var(--guide-bg); border-radius:12px; }
+.guide-pass-link { text-align:center; }.guide-action { display:inline-block; margin-top:12px; padding:14px 24px; border-radius:12px; background:var(--guide-accent); color:var(--guide-bg); font-weight:700; text-decoration:none; }
+.guide-plain-list { padding-left:20px; line-height:1.8; }.guide-message { margin-top:18vh; text-align:center; }.guide-footer { padding:42px 0 8px; text-align:center; color:var(--guide-accent); font-size:10px; font-weight:700; letter-spacing:.15em; }
+.guide-nav a:focus-visible,.guide-action:focus-visible { outline:3px solid var(--guide-accent); outline-offset:3px; }
+@media (max-width:560px) { .guide-hero { padding-top:50px; }.guide-card { padding:26px 20px; }.guide-program-item { grid-template-columns:1fr; gap:4px; } }

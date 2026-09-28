@@ -26,6 +26,7 @@ export type GuestPassGuideResult =
   | { status: "unavailable" };
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+import { fetchGuestGuide } from "./guest-guide-transport";
 const tokenPattern = /^[0-9a-f]{64}$/;
 const guestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const referencePattern = /^K[0-9A-F]{4}-[0-9A-F]{4}$/;
@@ -109,23 +110,9 @@ export async function loadGuestPassGuide(
   if (!slugPattern.test(slug) || !isHouseholdInvitationToken(invitationToken)) {
     return { status: "invalid-invitation" };
   }
-  const supabaseUrl = dependencies.supabaseUrl ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const publishableKey = dependencies.publishableKey ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!supabaseUrl || !publishableKey) return { status: "unavailable" };
-  const fetcher = dependencies.fetcher ?? fetch;
-  try {
-    const response = await fetcher(`${supabaseUrl.replace(/\/$/, "")}/functions/v1/guest-wedding-guide`, {
-      method: "POST",
-      headers: { apikey: publishableKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ slug, invitationToken }),
-      cache: "no-store",
-    });
-    if (response.status === 403) return { status: "invalid-invitation" };
-    if (!response.ok) return { status: "unavailable" };
-    const guide = parseGuestPassGuide(await response.json());
-    if (!guide) return { status: "unavailable" };
-    return guide.passes.length ? { status: "ready", guide } : { status: "empty" };
-  } catch {
-    return { status: "unavailable" };
-  }
+  const result = await fetchGuestGuide(slug, invitationToken, dependencies);
+  if (result.status !== "ready") return result;
+  const guide = parseGuestPassGuide(result.value);
+  if (!guide) return { status: "unavailable" };
+  return guide.passes.length ? { status: "ready", guide } : { status: "empty" };
 }
