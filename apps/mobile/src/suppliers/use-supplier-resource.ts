@@ -13,6 +13,14 @@ import type {
   SupplierEditorData,
   SupplierLoadResult,
 } from "./model";
+import {
+  loadSupplierPaymentDetails,
+  loadSupplierPaymentSchedule,
+} from "./payments/api";
+import type {
+  SupplierPaymentDetailsData,
+  SupplierPaymentScheduleData,
+} from "./payments/model";
 
 type Loader<T> = (membership: WorkspaceMembership) => Promise<SupplierLoadResult<T>>;
 type RequestResult<T> = { requestId: string; result: SupplierLoadResult<T> | null; failed: boolean };
@@ -82,4 +90,20 @@ export function useSupplierEditorResource(supplierId: string | null) {
     [supplierId],
   );
   return useSupplierResource<SupplierEditorData>(loader, `editor:${supplierId ?? "new"}`);
+}
+
+export function useSupplierPaymentScheduleResource(supplierId: string) {
+  const loader = useCallback(
+    (membership: WorkspaceMembership) => loadSupplierPaymentSchedule(membership, supplierId),
+    [supplierId],
+  );
+  return useSupplierResource<SupplierPaymentScheduleData>(loader, `payments:${supplierId}`);
+}
+
+export function useSupplierPaymentDetailsResource(supplierId: string, paymentId: string) {
+  const loader = useCallback(
+    (membership: WorkspaceMembership) => loadSupplierPaymentDetails(membership, supplierId, paymentId),
+    [supplierId, paymentId],
+  );
+  return useSupplierResource<SupplierPaymentDetailsData>(loader, `payment:${supplierId}:${paymentId}`);
 }

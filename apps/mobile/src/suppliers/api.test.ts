@@ -138,6 +138,9 @@ function responseFor(record: QueryRecord): DbResponse {
   if (record.table === "supplier_contract_attachments") {
     return { data: [{ wedding_id: weddingId, supplier_id: "supplier-a", attachment_id: "attachment-a", created_at: "2026-09-02T00:00:00Z" }], error: null };
   }
+  if (record.table === "supplier_installment_schedule" || record.table === "supplier_payment_transactions") {
+    return { data: [], error: null };
+  }
   if (record.table === "attachments") {
     if (settings.hideAttachment) return { data: [], error: null };
     return { data: [{
@@ -175,6 +178,7 @@ function mockQueries() {
       eq(column: string, value: unknown) { record.filters.push({ operator: "eq", column, value }); return query; },
       neq(column: string, value: unknown) { record.filters.push({ operator: "neq", column, value }); return query; },
       in(column: string, value: unknown) { record.filters.push({ operator: "in", column, value }); return query; },
+      limit(value: number) { record.filters.push({ operator: "limit", column: "", value }); return query; },
       order(column: string, options: { ascending?: boolean } = {}) { record.orders.push({ column, ascending: options.ascending ?? true }); return query; },
       maybeSingle() { record.singleResult = true; return Promise.resolve(responseFor(record)); },
       single() { record.singleResult = true; return Promise.resolve(responseFor(record)); },
