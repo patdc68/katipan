@@ -31,7 +31,8 @@ insert into public.budget_categories(id,wedding_id,name) values
   ('30000000-0000-0000-0000-000000000702','10000000-0000-0000-0000-000000000702','F5 Budget B');
 insert into public.suppliers(id,wedding_id,name,category) values
   ('50000000-0000-0000-0000-000000000701','10000000-0000-0000-0000-000000000701','F5 Supplier A','Catering'),
-  ('50000000-0000-0000-0000-000000000702','10000000-0000-0000-0000-000000000702','F5 Supplier B','Flowers');
+  ('50000000-0000-0000-0000-000000000702','10000000-0000-0000-0000-000000000702','F5 Supplier B','Flowers'),
+  ('50000000-0000-0000-0000-000000000703','10000000-0000-0000-0000-000000000701','F5 Supplier A2','Music');
 insert into public.attachments
   (id,wedding_id,object_path,original_filename,content_type,size_bytes,visibility,status,available_at) values
   ('40000000-0000-0000-0000-000000000701','10000000-0000-0000-0000-000000000701','tests/f5/receipt','receipt.pdf','application/pdf',100,'FINANCIAL_PRIVATE','AVAILABLE',now()),
@@ -39,6 +40,9 @@ insert into public.attachments
 insert into public.budget_items(id,wedding_id,category_id,supplier_id,name,estimated_amount)
 values ('60000000-0000-0000-0000-000000000701','10000000-0000-0000-0000-000000000701',
   '30000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701','Supplier allocation',500);
+insert into public.budget_items(id,wedding_id,category_id,supplier_id,name,estimated_amount)
+values ('60000000-0000-0000-0000-000000000703','10000000-0000-0000-0000-000000000701',
+  '30000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701','Alternate supplier allocation',150);
 insert into public.budget_items(id,wedding_id,category_id,name,estimated_amount,actual_amount)
 values ('60000000-0000-0000-0000-000000000702','10000000-0000-0000-0000-000000000701',
   '30000000-0000-0000-0000-000000000701','Manual non-supplier cost',100,80);
@@ -65,6 +69,11 @@ select extensions.throws_ok($$select public.create_budget_item(
 insert into f5_state values ('installment',public.create_supplier_installment(
   '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
   '60000000-0000-0000-0000-000000000701',300,current_date-1,'Deposit'));
+insert into f5_state values ('installment2',public.create_supplier_installment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  '60000000-0000-0000-0000-000000000701',100,current_date,'Alternate schedule for idempotency test'));
+update public.supplier_installments set cancelled_at=now()
+where id=(select id from f5_state where label='installment2');
 select extensions.ok((select status = 'OVERDUE' and unpaid_balance = 300 and paid_amount = 0
   from public.supplier_installment_schedule where id = (select id from f5_state where label='installment')),
   'Past due installment is derived overdue while unpaid');
@@ -73,20 +82,101 @@ select extensions.ok((select committed_total=1000 and scheduled_total=300 and pa
   from public.wedding_payment_totals where wedding_id='10000000-0000-0000-0000-000000000701'),
   'Schedule remains independent of commitment and actual payment');
 
+select extensions.throws_ok($$insert into public.supplier_payment_transactions
+  (wedding_id,supplier_id,amount,paid_at,recorded_by_user_id)
+  values ('10000000-0000-0000-0000-000000000701',
+    '50000000-0000-0000-0000-000000000701',1,'2026-09-28 10:00:00+08',auth.uid())$$,
+  '23514',null,'Direct MANUAL PAYMENT insert requires a client request ID');
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  null,null,1,'2026-09-28 10:00:00+08',null)$$,
+  '22023',null,'Payment RPC requires a non-null client request ID');
+
 insert into f5_state values ('payment1',public.record_supplier_payment(
   '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
   (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000701',
-  100,now(),'Bank transfer','F5-001','First partial'));
+  100,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  ' Bank transfer ',' F5-001 ','First partial'));
+select extensions.is((select count(*) from public.supplier_payment_transactions
+  where client_request_id='90000000-0000-0000-0000-000000000701'),
+  1::bigint,'First payment request creates exactly one PAYMENT');
+select extensions.is(public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000701',
+  100,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  'Bank transfer','F5-001','First partial'),
+  (select id from f5_state where label='payment1'),
+  'Exact normalized replay returns the existing PAYMENT ID');
+select extensions.is((select count(*) from public.supplier_payment_transactions
+  where client_request_id='90000000-0000-0000-0000-000000000701'),
+  1::bigint,'Exact replay leaves the transaction row count unchanged');
+select extensions.throws_ok($$insert into public.supplier_payment_transactions
+  (wedding_id,supplier_id,amount,paid_at,client_request_id,recorded_by_user_id)
+  values ('10000000-0000-0000-0000-000000000701',
+    '50000000-0000-0000-0000-000000000701',100,'2026-09-28 10:00:00+08',
+    '90000000-0000-0000-0000-000000000701',auth.uid())$$,
+  '23505',null,'Unique request index rejects duplicate direct MANUAL PAYMENT inserts');
+
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000701',
+  101,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  'Bank transfer','F5-001','First partial')$$,
+  '22023',null,'Same request key with a different amount is rejected');
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000703',
+  null,null,100,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  'Bank transfer','F5-001','First partial')$$,
+  '22023',null,'Same request key with a different Supplier is rejected');
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  (select id from f5_state where label='installment2'),'60000000-0000-0000-0000-000000000701',
+  100,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  'Bank transfer','F5-001','First partial')$$,
+  '22023',null,'Same request key with a different installment is rejected');
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000703',
+  100,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  'Bank transfer','F5-001','First partial')$$,
+  '22023',null,'Same request key with a different Budget Item is rejected');
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000701',
+  100,'2026-09-28 10:00:01+08','90000000-0000-0000-0000-000000000701',
+  'Bank transfer','F5-001','First partial')$$,
+  '22023',null,'Same request key with a different paid_at is rejected');
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000701',
+  100,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  'Cash','F5-001','First partial')$$,
+  '22023',null,'Same request key with a different payment method is rejected');
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000701',
+  100,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  'Bank transfer','F5-OTHER','First partial')$$,
+  '22023',null,'Same request key with a different reference is rejected');
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000701',
+  100,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  'Bank transfer','F5-001','Changed notes')$$,
+  '22023',null,'Same request key with different notes is rejected');
+
 insert into f5_state values ('payment2',public.record_supplier_payment(
   '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
   (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000701',
-  50,now(),'Cash','F5-002','Second partial'));
+  50,'2026-09-28 10:01:00+08','90000000-0000-0000-0000-000000000702',
+  'Cash','F5-002','Second partial'));
 select extensions.ok((select amount=300 and paid_amount=150 and unpaid_balance=150 and status='OVERDUE'
   from public.supplier_installment_schedule where id=(select id from f5_state where label='installment')),
   'Two partial payments reduce the overdue balance without rewriting the schedule');
 insert into f5_state values ('unscheduled',public.record_supplier_payment(
   '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
-  null,null,20,now(),'Cash',null,'Legitimate unscheduled charge'));
+  null,null,20,'2026-09-28 10:02:00+08','90000000-0000-0000-0000-000000000703',
+  'Cash',null,'Legitimate unscheduled charge'));
 select extensions.ok((select scheduled_total=300 and paid_total=170 and
   unscheduled_paid_total=20 and remaining_commitment=830
   from public.wedding_payment_totals where wedding_id='10000000-0000-0000-0000-000000000701'),
@@ -97,6 +187,9 @@ select extensions.is((select actual_total from public.wedding_budget_totals
 
 insert into f5_state values ('reversal',public.reverse_supplier_payment(
   (select id from f5_state where label='payment1'),'Wrong payment amount'));
+select extensions.is((select client_request_id from public.supplier_payment_transactions
+  where id=(select id from f5_state where label='reversal')),
+  null::uuid,'REVERSAL remains valid without a client request ID');
 select extensions.ok((select paid_total=70 and remaining_commitment=930 and overdue_total=250
   from public.wedding_payment_totals where wedding_id='10000000-0000-0000-0000-000000000701'),
   'Explicit reversal negates actual and reopens installment balance');
@@ -109,7 +202,8 @@ select extensions.throws_ok(format('update public.supplier_payment_transactions 
 insert into f5_state values ('correction',public.record_supplier_payment(
   '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
   (select id from f5_state where label='installment'),'60000000-0000-0000-0000-000000000701',
-  80,now(),'Bank transfer','F5-001-C','Corrected amount'));
+  80,'2026-09-28 10:03:00+08','90000000-0000-0000-0000-000000000704',
+  'Bank transfer','F5-001-C','Corrected amount'));
 select extensions.is((select paid_total from public.wedding_payment_totals
   where wedding_id='10000000-0000-0000-0000-000000000701'),
   150::numeric,'Correction is a new transaction following the reversal');
@@ -134,8 +228,13 @@ select extensions.throws_ok(format('select public.link_payment_receipt_attachmen
   '23503',null,'Cross-Wedding receipt link is rejected');
 select extensions.throws_ok($$select public.record_supplier_payment(
   '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000702',
-  null,null,1,now())$$,
+  null,null,1,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000799')$$,
   '23503',null,'Cross-Wedding Supplier transaction is rejected');
+
+select extensions.throws_ok($$select public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000702','50000000-0000-0000-0000-000000000702',
+  null,null,9,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701')$$,
+  '42501',null,'Cross-Wedding finance authorization is checked before replay lookup');
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000702',true);
 select extensions.is((select count(*) from public.supplier_payment_transactions),
@@ -143,10 +242,20 @@ select extensions.is((select count(*) from public.supplier_payment_transactions)
 select extensions.ok(public.create_supplier('10000000-0000-0000-0000-000000000701',
   'Full Coordinator Supplier','Music') is not null,
   'Full Coordinator can write finance records');
+select extensions.ok(public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  null,null,1,'2026-09-28 10:04:00+08','90000000-0000-0000-0000-000000000705',
+  'Cash',null,'Full Coordinator payment') is not null,
+  'Full Coordinator can record a payment');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000706',true);
-select extensions.ok(public.create_supplier('10000000-0000-0000-0000-000000000703',
-  'Controller Supplier','Coordination') is not null,
-  'Valid temporary controller may manage its Wedding finances');
+insert into f5_state values ('controller_supplier',public.create_supplier(
+  '10000000-0000-0000-0000-000000000703','Controller Supplier','Coordination'));
+select extensions.ok(public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000703',
+  (select id from f5_state where label='controller_supplier'),
+  null,null,1,'2026-09-28 10:05:00+08','90000000-0000-0000-0000-000000000706',
+  'Cash',null,'Coordinator-managed payment') is not null,
+  'Valid coordinator-managed controller can record a payment');
 select extensions.is((select count(*) from public.suppliers),
   1::bigint,'Temporary controller sees only its Wedding');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000703',true);
@@ -156,7 +265,8 @@ select extensions.is((select count(*) from public.wedding_payment_totals),
   0::bigint,'Day-of Coordinator cannot read derived finance totals');
 select extensions.throws_ok($$select public.record_supplier_payment(
   '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
-  null,null,1,now())$$,'42501',null,'Day-of Coordinator cannot record payment');
+  null,null,1,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000798')$$,
+  '42501',null,'Day-of Coordinator cannot record payment');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000704',true);
 select extensions.is((select count(*) from public.supplier_installments),
   0::bigint,'Guest Coordinator cannot read installments');
@@ -171,7 +281,27 @@ select extensions.is((select count(*) from public.suppliers),
 select extensions.is((select count(*) from public.supplier_payment_transactions),
   0::bigint,'Cross-Wedding actual transactions stay isolated');
 
+insert into f5_state values ('other_recorder_payment',public.record_supplier_payment(
+  '10000000-0000-0000-0000-000000000702','50000000-0000-0000-0000-000000000702',
+  null,null,9,'2026-09-28 10:00:00+08','90000000-0000-0000-0000-000000000701',
+  'Cash','SHARED-KEY','Different authenticated recorder'));
+select extensions.ok((select id<>(select id from f5_state where label='payment1')
+  and wedding_id='10000000-0000-0000-0000-000000000702'
+  and recorded_by_user_id='00000000-0000-0000-0000-000000000705'
+  from public.supplier_payment_transactions
+  where id=(select id from f5_state where label='other_recorder_payment')),
+  'A different authenticated recorder can use the same UUID without receiving the original payment');
+
 set local role postgres;
+insert into public.supplier_payment_transactions
+  (id,wedding_id,supplier_id,kind,source,amount,paid_at,notes)
+values ('80000000-0000-0000-0000-000000000701',
+  '10000000-0000-0000-0000-000000000701','50000000-0000-0000-0000-000000000701',
+  'PAYMENT','LEGACY',1,'2026-09-28 10:00:00+08','Historical legacy fixture');
+select extensions.ok((select client_request_id is null
+  from public.supplier_payment_transactions
+  where id='80000000-0000-0000-0000-000000000701'),
+  'Historical LEGACY PAYMENT rows may retain a null request key');
 select extensions.ok(not exists (
   select 1 from private.legacy_supplier_payments old
   left join public.supplier_installments i on i.id=old.id and i.wedding_id=old.wedding_id
@@ -205,8 +335,22 @@ select extensions.ok(not has_table_privilege('anon','public.supplier_payment_tra
   and not has_table_privilege('anon','public.supplier_installments','SELECT')
   and not has_table_privilege('anon','public.wedding_payment_totals','SELECT')
   and not has_function_privilege('anon',
-    'public.record_supplier_payment(uuid,uuid,uuid,uuid,numeric,timestamptz,text,text,text)','EXECUTE'),
+    'public.record_supplier_payment(uuid,uuid,uuid,uuid,numeric,timestamptz,uuid,text,text,text)','EXECUTE'),
   'Anonymous callers have no finance table, view, or RPC access');
+select extensions.ok(to_regprocedure(
+    'public.record_supplier_payment(uuid,uuid,uuid,uuid,numeric,timestamptz,uuid,text,text,text)') is not null
+  and to_regprocedure(
+    'public.record_supplier_payment(uuid,uuid,uuid,uuid,numeric,timestamptz,text,text,text)') is null
+  and has_function_privilege('authenticated',
+    'public.record_supplier_payment(uuid,uuid,uuid,uuid,numeric,timestamptz,uuid,text,text,text)','EXECUTE'),
+  'Only the request-key RPC signature is callable by authenticated users');
+select extensions.ok(exists (select 1 from pg_indexes
+  where schemaname='public' and tablename='supplier_payment_transactions'
+    and indexname='supplier_payment_transactions_recorder_request_unique'
+    and indexdef like '%(recorded_by_user_id, client_request_id)%'
+    and indexdef like '%kind = ''PAYMENT''%'
+    and indexdef like '%source = ''MANUAL''%'),
+  'A partial unique index makes the recorder request key authoritative');
 select extensions.ok(not has_table_privilege('authenticated','public.supplier_payment_transactions','UPDATE')
   and not has_table_privilege('authenticated','public.supplier_payment_transactions','DELETE')
   and not has_table_privilege('authenticated','private.legacy_supplier_payments','SELECT'),
