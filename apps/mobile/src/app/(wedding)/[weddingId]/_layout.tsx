@@ -55,6 +55,7 @@ export default function WeddingTabsLayout() {
       <Tabs.Screen name="plan" options={{ title: "Plan", tabBarAccessibilityLabel: "Plan tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>☷</Text> }} />
       <Tabs.Screen name="guests" options={{ title: "Guests", tabBarAccessibilityLabel: "Guests tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>♧</Text> }} />
       <Tabs.Screen name="seating" options={{ href: null, title: "Seating" }} />
+      <Tabs.Screen name="day" options={{ href: null, title: "Wedding Day" }} />
       <Tabs.Screen name="budget" options={{ title: "Budget", tabBarAccessibilityLabel: "Budget tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>₱</Text> }} />
       <Tabs.Screen name="more" options={{ title: "More", tabBarAccessibilityLabel: "More tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>•••</Text> }} />
     </Tabs>
