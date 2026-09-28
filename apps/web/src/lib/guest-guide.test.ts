@@ -49,6 +49,20 @@ describe("sanitized Guest Guide render model", () => {
     expect(parseGuestGuide({ ...guide(), template: "OTHER" }, true)).toBeNull();
     expect(parseGuestGuide({ ...guide(), sections: null }, true)).toBeNull();
   });
+  it("renders hydrated Google Places and leaves CUSTOM Places intact", () => {
+    const raw: { sections: Array<{ data?: unknown }> } = guide();
+    raw.sections[1].data = [
+      { name: "Custom Chapel", purpose: "CEREMONY", address: "Custom address", notes: "Guest entrance", privateNotes: "secret" },
+      { name: "Google Garden", purpose: "RECEPTION", address: "Current Google address", notes: "Guest entrance", privateNotes: "secret" },
+      { name: null, purpose: "OTHER", address: null, notes: null, privateNotes: "secret" },
+    ];
+    const parsed = parseGuestGuide(raw, false);
+    expect(parsed?.sections[1]?.places).toEqual([
+      { name: "Custom Chapel", purpose: "CEREMONY", label: null, address: "Custom address", notes: "Guest entrance" },
+      { name: "Google Garden", purpose: "RECEPTION", label: null, address: "Current Google address", notes: "Guest entrance" },
+    ]);
+    expect(JSON.stringify(parsed)).not.toContain("privateNotes");
+  });
   it("uses the existing no-store Edge Function and maps public/private failures safely", async () => {
     const fetcher = vi.fn(async (...args: Parameters<typeof fetch>) => { void args; return Response.json(guide()); });
     const options = { fetcher, supabaseUrl: "https://project.test/", publishableKey: "publishable-key" };

@@ -224,12 +224,36 @@ async function callGoogleDetails(
     return errorResponse(400, "INVALID_LOCALE", "Language or region code is invalid.");
   }
 
+  const details = await fetchGooglePlaceDetails(placeId, apiKey, deps.fetch, languageCode, regionCode);
+  if (!details.place) {
+    return errorResponse(502, "GOOGLE_PLACES_ERROR", details.failure === "invalid"
+      ? "Google Place details were invalid."
+      : "Google Place details failed.");
+  }
+
+  return jsonResponse(details.place);
+}
+
+// Internal lookup shared with the guest projection. It never returns Google's raw payload.
+export type GooglePlaceDetailsResult =
+  | { place: GooglePlaceDto; failure: null }
+  | { place: null; failure: "upstream" | "invalid" };
+
+export async function fetchGooglePlaceDetails(
+  placeId: string,
+  apiKey: string,
+  fetcher: typeof fetch,
+  languageCode?: string,
+  regionCode?: string,
+  signal?: AbortSignal,
+): Promise<GooglePlaceDetailsResult> {
   const url = new URL(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`);
   if (languageCode) url.searchParams.set("languageCode", languageCode);
   if (regionCode) url.searchParams.set("regionCode", regionCode.toUpperCase());
 
-  const response = await deps.fetch(url, {
+  const response = await fetcher(url, {
     method: "GET",
+    signal,
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
@@ -239,15 +263,11 @@ async function callGoogleDetails(
 
   if (!response.ok) {
     console.error(`Google Place Details failed with status ${response.status}.`);
-    return errorResponse(502, "GOOGLE_PLACES_ERROR", "Google Place details failed.");
+    return { place: null, failure: "upstream" };
   }
 
   const place = sanitizePlace(await parseJson(response));
-  if (!place) {
-    return errorResponse(502, "GOOGLE_PLACES_ERROR", "Google Place details were invalid.");
-  }
-
-  return jsonResponse(place);
+  return place ? { place, failure: null } : { place: null, failure: "invalid" };
 }
 
 export function createGooglePlacesHandler(

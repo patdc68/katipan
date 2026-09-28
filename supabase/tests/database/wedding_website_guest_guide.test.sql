@@ -16,6 +16,7 @@ set constraints all immediate;
 insert into public.guest_households(id,wedding_id,display_name) values
 ('20000000-0000-0000-0000-000000000801','10000000-0000-0000-0000-000000000801','Household One'),
 ('20000000-0000-0000-0000-000000000802','10000000-0000-0000-0000-000000000801','Household Two'),
+('20000000-0000-0000-0000-000000000805','10000000-0000-0000-0000-000000000801','Expired Link Household'),
 ('20000000-0000-0000-0000-000000000803','10000000-0000-0000-0000-000000000802','Other Wedding Household');
 insert into public.wedding_people(id,wedding_id,display_name) values
 ('30000000-0000-0000-0000-000000000801','10000000-0000-0000-0000-000000000801','Guest One'),
@@ -33,6 +34,18 @@ insert into public.wedding_places(id,wedding_id,source,place_type,custom_name,pr
 insert into public.wedding_place_purposes(wedding_id,place_id,purpose,guest_visible,guest_notes) values
 ('10000000-0000-0000-0000-000000000801','50000000-0000-0000-0000-000000000801','CEREMONY',true,'Use east entrance'),
 ('10000000-0000-0000-0000-000000000801','50000000-0000-0000-0000-000000000802','RECEPTION',false,null);
+insert into public.wedding_places(id,wedding_id,source,place_type,google_place_id,user_label,private_notes,archived_at) values
+('50000000-0000-0000-0000-000000000803','10000000-0000-0000-0000-000000000801','GOOGLE_PLACES','HOTEL','google-unlabeled',null,'secret-google',null),
+('50000000-0000-0000-0000-000000000804','10000000-0000-0000-0000-000000000801','GOOGLE_PLACES','GARDEN','google-labeled','Wedding Garden','secret-labeled',null),
+('50000000-0000-0000-0000-000000000805','10000000-0000-0000-0000-000000000801','GOOGLE_PLACES','HOTEL','google-hidden',null,'secret-hidden-google',null),
+('50000000-0000-0000-0000-000000000806','10000000-0000-0000-0000-000000000801','GOOGLE_PLACES','HOTEL','google-archived',null,'secret-archived',null);
+insert into public.wedding_place_purposes(wedding_id,place_id,purpose,guest_visible) values
+('10000000-0000-0000-0000-000000000801','50000000-0000-0000-0000-000000000803','ACCOMMODATION',true),
+('10000000-0000-0000-0000-000000000801','50000000-0000-0000-0000-000000000804','CEREMONY',true),
+('10000000-0000-0000-0000-000000000801','50000000-0000-0000-0000-000000000805','RECEPTION',false),
+('10000000-0000-0000-0000-000000000801','50000000-0000-0000-0000-000000000806','ACCOMMODATION',true);
+update public.wedding_places set archived_at = now()
+where id = '50000000-0000-0000-0000-000000000806';
 insert into public.wedding_dress_codes(id,wedding_id,title,description) values
 ('60000000-0000-0000-0000-000000000801','10000000-0000-0000-0000-000000000801','Garden formal','Wear light colors');
 insert into public.attire_groups(id,wedding_id,dress_code_id,title) values
@@ -73,9 +86,14 @@ select public.publish_wedding_website('10000000-0000-0000-0000-000000000802',tru
 
 set local role postgres;
 insert into private.household_website_tokens(wedding_id,household_id,token_hash,created_at,expires_at)
-values ('10000000-0000-0000-0000-000000000801','20000000-0000-0000-0000-000000000801',
+values ('10000000-0000-0000-0000-000000000801','20000000-0000-0000-0000-000000000805',
   extensions.digest(repeat('e',64),'sha256'),now()-interval '2 days',now()-interval '1 day');
 insert into website_test_tokens values ('expired',repeat('e',64));
+insert into public.guest_program_items(id,wedding_id,title,scheduled_start,place_id,is_published) values
+('a0000000-0000-0000-0000-000000000801','10000000-0000-0000-0000-000000000801','Google stop','2027-02-01 08:00+00','50000000-0000-0000-0000-000000000803',true),
+('a0000000-0000-0000-0000-000000000802','10000000-0000-0000-0000-000000000801','Labeled stop','2027-02-01 09:00+00','50000000-0000-0000-0000-000000000804',true),
+('a0000000-0000-0000-0000-000000000803','10000000-0000-0000-0000-000000000801','Custom stop','2027-02-01 10:00+00','50000000-0000-0000-0000-000000000801',true),
+('a0000000-0000-0000-0000-000000000804','10000000-0000-0000-0000-000000000801','Archived stop','2027-02-01 11:00+00','50000000-0000-0000-0000-000000000806',true);
 
 set local role service_role;
 do $$
@@ -84,6 +102,23 @@ begin
   select public.guest_wedding_guide('guide-wedding-a') into j;
   if jsonb_array_length(j->'sections') <> 2 or j::text like '%Guest One%' or j::text like '%secret-%'
     or j::text like '%Hidden Hotel%' or j::text like '%token_hash%' then raise exception 'Public projection leaked data: %', j; end if;
+  if not exists (select 1 from jsonb_array_elements(j->'sections'->1->'data') p
+      where p->>'googlePlaceId' = 'google-unlabeled' and p->>'name' is null and p->>'address' is null)
+    or not exists (select 1 from jsonb_array_elements(j->'sections'->1->'data') p
+      where p->>'googlePlaceId' = 'google-labeled' and p->>'name' = 'Wedding Garden')
+    or not exists (select 1 from jsonb_array_elements(j->'sections'->1->'data') p
+      where p->>'name' = 'Public Garden' and p->>'googlePlaceId' is null)
+    or j::text like '%google-hidden%' or j::text like '%google-archived%'
+    then raise exception 'Place projection fields or visibility failed: %', j; end if;
+  if not exists (select 1 from jsonb_array_elements(j->'guestProgram') p
+      where p->>'title' = 'Google stop' and p->>'googlePlaceId' = 'google-unlabeled' and p->>'placeName' is null)
+    or not exists (select 1 from jsonb_array_elements(j->'guestProgram') p
+      where p->>'title' = 'Labeled stop' and p->>'googlePlaceId' = 'google-labeled' and p->>'placeName' = 'Wedding Garden')
+    or not exists (select 1 from jsonb_array_elements(j->'guestProgram') p
+      where p->>'title' = 'Custom stop' and p->>'googlePlaceId' is null and p->>'placeName' = 'Public Garden')
+    or not exists (select 1 from jsonb_array_elements(j->'guestProgram') p
+      where p->>'title' = 'Archived stop' and p->>'googlePlaceId' is null and p->>'placeName' is null)
+    then raise exception 'Guest Program Place projection failed: %', j; end if;
   select token into t from website_test_tokens where label='one';
   select public.guest_wedding_guide('guide-wedding-a',t) into j;
   if jsonb_array_length(j->'sections') <> 4 or j::text not like '%Guest One Guidance%'
