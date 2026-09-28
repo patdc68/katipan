@@ -124,7 +124,8 @@ function responseFor(record: QueryRecord): { data: unknown; error: null } {
     case "entourage_assignments": rows = [{ id: "e0000000-0000-4000-8000-000000000001", wedding_id: ids.wedding, role_id: ids.group, guest_id: ids.guest, created_at: "2026-01-01T00:00:00.000Z" }]; break;
     case "seating_events": rows = [{ id: ids.event, wedding_id: ids.wedding, name: "Reception", event_kind: "RECEPTION", sort_order: 0, visibility: "TABLE_ONLY", created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" }]; break;
     case "seating_tables": rows = [{ id: ids.table, wedding_id: ids.wedding, event_id: ids.event, name: "Sampaguita", table_number: 1, capacity: 8, shape: "ROUND", sort_order: 0, zone: null, notes: null, created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" }]; break;
-    case "seating_assignments": rows = [{ id: "f0000000-0000-4000-8000-000000000001", wedding_id: ids.wedding, event_id: ids.event, table_id: ids.table, seat_id: null, guest_id: ids.guest, created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" }]; break;
+    case "seating_seats": rows = [{ id: "f1000000-0000-4000-8000-000000000001", wedding_id: ids.wedding, event_id: ids.event, table_id: ids.table, label: "A1", sort_order: 0, created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" }]; break;
+    case "seating_assignments": rows = [{ id: "f0000000-0000-4000-8000-000000000001", wedding_id: ids.wedding, event_id: ids.event, table_id: ids.table, seat_id: "f1000000-0000-4000-8000-000000000001", guest_id: ids.guest, created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" }]; break;
     default: throw new Error("Unexpected guest query: " + record.table);
   }
   const selected = rows.filter((row) => matches(row, record));
@@ -202,8 +203,8 @@ describe("guest workspace data scope", () => {
     expect(data.guests.map((item) => item.wedding_id)).toEqual([ids.wedding, ids.wedding]);
     expect(data.householdProgress[0]?.progress).toBe("NO_RESPONSE");
     expect(data.entourage).toEqual([{ guestId: ids.guest, roleName: "Maid of Honor" }]);
-    expect(data.seating).toEqual([{ guestId: ids.guest, eventName: "Reception", tableName: "Sampaguita", hasSeat: false }]);
-    expect(records).toHaveLength(14);
+    expect(data.seating).toEqual([{ guestId: ids.guest, eventName: "Reception", tableName: "Sampaguita", hasSeat: true, seatLabel: "A1" }]);
+    expect(records).toHaveLength(15);
     expect(records.every((record) => record.filters.some((filter) => filter.column === "wedding_id" && filter.value === ids.wedding))).toBe(true);
   });
 });

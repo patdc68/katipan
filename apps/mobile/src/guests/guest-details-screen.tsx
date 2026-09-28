@@ -129,6 +129,7 @@ function GuestDetailsContent({
   });
   const openGuestList = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/list", params: { weddingId } });
   const openEntourage = () => router.navigate({ pathname: "/(wedding)/[weddingId]/guests/entourage", params: { weddingId } });
+  const openSeating = () => router.navigate({ pathname: "/(wedding)/[weddingId]/seating", params: { weddingId } });
   const toggleGroup = (groupId: string) => {
     const isMember = entry.groupIds.includes(groupId);
     void runMutation(
@@ -344,11 +345,11 @@ function GuestDetailsContent({
 
       {entry.seating !== null && (
         <View style={styles.section}>
-          <SectionHeader title="Seating assignment" description="Seating is tracked separately from RSVP and event check-in." />
+          <SectionHeader title="Reception seating" description="Seating is tracked separately from RSVP and event check-in." action={<KatipanButton label={canEdit ? "Manage seating" : "View seating"} variant="text" onPress={openSeating} />} />
           <EditorialCard style={styles.detailsCard}>
             {entry.seating.length ? entry.seating.map((item) => (
-              <DetailLine key={`${item.eventName}:${item.tableName}`} label={item.eventName} value={`${item.tableName}${item.hasSeat ? " · Seat assigned" : " · Table only"}`} />
-            )) : <KatipanText color="textMuted">No seating assignment is recorded.</KatipanText>}
+              <DetailLine key={`${item.eventName}:${item.tableName}`} label={item.eventName} value={`${item.tableName}${item.seatLabel ? ` · Seat ${item.seatLabel}` : " · Table only"}`} />
+            )) : rsvpStatus === "ATTENDING" ? <KatipanText color="textMuted">This Attending Guest is not seated at the Reception yet.</KatipanText> : <KatipanText color="textMuted">No Reception seating assignment is recorded.</KatipanText>}
           </EditorialCard>
         </View>
       )}

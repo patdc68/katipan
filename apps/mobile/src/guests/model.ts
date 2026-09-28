@@ -17,7 +17,7 @@ export type GuestRsvpStatus = Database["public"]["Enums"]["guest_rsvp_status"];
 export type GuestAllowanceType = Database["public"]["Enums"]["guest_allowance_type"];
 export type HouseholdProgressStatus = Database["public"]["Enums"]["household_rsvp_progress"];
 
-export type GuestSeatingSummary = { guestId: string; eventName: string; tableName: string; hasSeat: boolean };
+export type GuestSeatingSummary = { guestId: string; eventName: string; tableName: string; hasSeat: boolean; seatLabel: string | null };
 export type GuestEntourageSummary = { guestId: string; roleName: string };
 
 export type GuestWorkspaceData = {
