@@ -194,3 +194,19 @@ Deno.test("Google failures are sanitized and never expose the key", async () => 
   assertEquals(response.status, 502, "Upstream failures should be mapped to a sanitized gateway error");
   assert(!text.includes(googleKey), "The Google key must not be exposed in error responses");
 });
+
+Deno.test("details keeps its authenticated invalid-payload response", async () => {
+  const fakeFetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith("/auth/v1/user")) return responseJson({ id: "owner" });
+    if (url.startsWith("https://project.test/rest/v1/weddings")) return responseJson([{ id: weddingId }]);
+    return responseJson({ unexpected: "raw-google-payload" });
+  }) as typeof fetch;
+  const response = await createGooglePlacesHandler("details", { fetch: fakeFetch, envGet })(
+    makeRequest("owner", { weddingId, placeId: "place-1" }),
+  );
+  const body = await response.json();
+  assertEquals(response.status, 502, "Invalid Google payload must be rejected");
+  assertEquals(body, { error: { code: "GOOGLE_PLACES_ERROR", message: "Google Place details were invalid." } },
+    "Authenticated details error contract changed");
+});

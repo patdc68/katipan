@@ -1,3 +1,5 @@
+import { hydrateGuestGuidePlaces } from "./guest_guide_places.ts";
+
 type Mode = "guide" | "rsvp";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -72,7 +74,11 @@ export function createGuestWebsiteHandler(
         const status = error.code === "P0002" ? 404 : error.code === "42501" ? 403 : 500;
         return json({ error: status === 500 ? "Service unavailable" : "Guide or invitation unavailable" }, status, origin);
       }
-      return json(await result.json(), 200, origin);
+      const projection: unknown = await result.json();
+      const hydrated = mode === "guide"
+        ? await hydrateGuestGuidePlaces(projection, envGet("GOOGLE_PLACES_API_KEY"), fetcher)
+        : projection;
+      return json(hydrated, 200, origin);
     } catch {
       return json({ error: "Service unavailable" }, 503, origin);
     }
