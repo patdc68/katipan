@@ -49,10 +49,11 @@ export default function RunOfShowScreen() {
     {shown.length === 0 ? <EditorialCard><EmptyState title={data.items.length ? "No items in this filter" : "No Run of Show items yet"}
       description={data.items.length ? "Choose another status to see the timeline." : "Add the first operational cue for this Wedding."}
       action={canEdit && !data.items.length ? <KatipanButton label="Add Item" onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/plan/run-of-show/new", params: { weddingId } } as unknown as Href)} /> : undefined} /></EditorialCard>
-      : shown.map(item => <TimelineItem key={item.id} item={item} data={data} onOpen={() => openItem(item.id)} />)}
+      : shown.map(item => <TimelineItem key={item.id} item={item} data={data} onOpen={() => openItem(item.id)}
+        onProgram={(programId) => router.push({ pathname: "/(wedding)/[weddingId]/website/program/[itemId]", params: { weddingId, itemId: programId } } as unknown as Href)} />)}
   </KatipanScreen>;
 }
-function TimelineItem({ item, data, onOpen }: { item: RunItem; data: RunData; onOpen: () => void }) {
+function TimelineItem({ item, data, onOpen, onProgram }: { item: RunItem; data: RunData; onOpen: () => void; onProgram: (id: string) => void }) {
   const place = data.places.find(p => p.id === item.place_id)?.name;
   const people = data.assignments.filter(a => a.itemId === item.id).map(a => data.members.find(m => m.id === a.membershipId)?.name).filter((name): name is string => Boolean(name));
   const links = data.guestLinks.filter(link => link.operational_item_id === item.id);
@@ -64,7 +65,10 @@ function TimelineItem({ item, data, onOpen }: { item: RunItem; data: RunData; on
     {!!item.description?.trim() && <KatipanText variant="bodySmall" color="textMuted">{item.description}</KatipanText>}
     {item.actual_start && <KatipanText variant="bodySmall" color="textMuted">Actual {formatTime(item.actual_start)}{item.actual_end ? ` – ${formatTime(item.actual_end)}` : ""}</KatipanText>}
     {!!people.length && <KatipanText variant="bodySmall" color="textMuted">Responsible: {people.join(", ")}</KatipanText>}
-    <KatipanText variant="bodySmall" color="secondary">{links.some(link => link.review_required) ? "Guest schedule review required" : links.length ? "Linked Guest Program item" : "Operational only"}</KatipanText>
+    {links.length ? links.map(link => <View key={link.id}>
+      <KatipanText variant="bodySmall" color="secondary">Guest Program: {link.title} · {link.is_published ? "Published" : "Draft"}{link.review_required ? " · Review Required" : ""}</KatipanText>
+      <KatipanButton label="Open Guest Program Item" variant="text" onPress={() => onProgram(link.id)} />
+    </View>) : <KatipanText variant="bodySmall" color="secondary">Operational only</KatipanText>}
     <KatipanButton label="View Item" variant="text" onPress={onOpen} />
   </EditorialCard></View>;
 }
