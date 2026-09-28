@@ -39,10 +39,10 @@ function categoriesHref(weddingId: string): Href {
   return { pathname: "/(wedding)/[weddingId]/budget/categories", params: { weddingId } } as unknown as Href;
 }
 
-function supplierPaymentsHref(weddingId: string, itemId?: string): Href {
+function supplierHref(weddingId: string, supplierId: string): Href {
   return {
-    pathname: "/(wedding)/[weddingId]/budget/supplier-payments-info",
-    params: { weddingId, ...(itemId ? { itemId } : {}) },
+    pathname: "/(wedding)/[weddingId]/budget/suppliers/[supplierId]",
+    params: { weddingId, supplierId },
   } as unknown as Href;
 }
 
@@ -244,7 +244,7 @@ export function BudgetItemEditorScreen({ expenseMode = false }: { expenseMode?: 
             </View>}
           </>}
           {selectedSupplier && <KatipanText variant="bodySmall" color="textMuted">Supplier actual payments are managed separately. This Budget Item cannot store an actual amount while it is linked to a Supplier.</KatipanText>}
-          {selectedSupplier && <KatipanButton label="Supplier Payments" variant="secondary" disabled={saving} onPress={() => router.push(supplierPaymentsHref(resource.weddingId, item?.id))} />}
+          {selectedSupplier && <KatipanButton label="View Supplier Details" variant="secondary" disabled={saving} onPress={() => router.push(supplierHref(resource.weddingId, selectedSupplier.id))} />}
           {fieldError.supplierId && <KatipanText variant="bodySmall" color="error">{fieldError.supplierId}</KatipanText>}
         </View>}
 

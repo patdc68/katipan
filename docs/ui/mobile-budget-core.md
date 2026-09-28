@@ -16,7 +16,11 @@ Both compositions use **Warm Editorial Nuptial**: the existing shared ivory surf
 - `/(wedding)/[weddingId]/budget/items/new`
 - `/(wedding)/[weddingId]/budget/items/[itemId]`
 - `/(wedding)/[weddingId]/budget/expenses/new`
-- `/(wedding)/[weddingId]/budget/supplier-payments-info` (explanatory placeholder only)
+- `/(wedding)/[weddingId]/budget/suppliers`
+- `/(wedding)/[weddingId]/budget/suppliers/new`
+- `/(wedding)/[weddingId]/budget/suppliers/[supplierId]`
+- `/(wedding)/[weddingId]/budget/suppliers/[supplierId]/edit`
+- `/(wedding)/[weddingId]/budget/supplier-payments-info` (explanatory placeholder for the later payments slice)
 
 ## Finance source of truth
 
@@ -38,7 +42,7 @@ Archived categories are left out of active category lists. Their records remain 
 
 For a Budget Item without a Supplier, `actual_amount` holds an optional manual actual cost. The item editor can add or edit it. Add Expense creates a `CONFIRMED` non-Supplier Budget Item with `estimated_amount = 0` and saves the entered cost to `actual_amount`.
 
-For a Supplier-linked Budget Item, `actual_amount` stays null. Choosing a Supplier explains that actual Supplier payments are managed separately; the Budget UI does not create a payment transaction, commitment, installment, or receipt. The Supplier Payments action opens an explanatory placeholder for the next slice. The database constraint remains authoritative if a client submits an invalid combination.
+For a Supplier-linked Budget Item, `actual_amount` stays null. Choosing a Supplier explains that actual Supplier payments are managed separately, and the Budget UI links to that Supplier's Details. Supplier Details shows the agreed commitment and `supplier_finance_totals` without creating a payment transaction, installment, or receipt. The database constraint remains authoritative if a client submits an invalid combination.
 
 ## Finance privacy and Wedding boundaries
 
@@ -50,7 +54,7 @@ Every read and mutation includes the active Wedding ID. Item edits first locate 
 
 - Payment schedules and Supplier payment actions are removed from the selected Dashboard composition. The remaining summary reports actual spend from the canonical totals view only.
 - The Add Expense presentation is mapped to a manual non-Supplier actual on a Budget Item. Its date, payment-method, Supplier-payment, and receipt concepts are omitted because those records are outside this slice's backend/UI contract.
-- A linked Supplier opens an explanatory Supplier Payments placeholder; this branch does not implement Supplier details or payment entry.
+- Supplier-linked Budget Items link to Supplier Details; commitment and aggregate totals are shown separately from Budget estimates. Installment management and payment entry remain outside this slice.
 - Categories and amounts come from the current Wedding. No sample finance values or wedding facts are included.
 
 ## Deferred physical QA
