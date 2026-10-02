@@ -250,10 +250,31 @@ The Edge/SQL test-runner limitation is recorded under Phase 0 as an environment 
 
 | ID | Severity | Affected route | Exact step | Expected | Actual | Reproduction | Evidence | Suspected component/API/RPC | Useful Wedding/User IDs |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A-001 | MAJOR | Wedding bottom navigation, `/(wedding)/[weddingId]` | Sign in and open the expected Wedding workspace on Android. | Only Home, Plan, Guests, Budget, and More appear as canonical tabs. | Those five appear, along with additional `places...` tab entries. | Open the signed-in Wedding workspace; the extra Places routes appear in the bottom navigation. | Physical Android observation; no screenshot/log file attached. | `apps/mobile/src/app/(wedding)/[weddingId]/_layout.tsx` hides `seating`, `day`, `website`, `style`, and `team`, but does not hide `places`. Verified against `master`. | Not recorded |
+| A-001 | MAJOR — OPEN; physical Android regression pending | Wedding bottom navigation, `/(wedding)/[weddingId]` | Sign in and open the expected Wedding workspace on Android. | Only Home, Plan, Guests, Budget, and More appear as canonical tabs. | Those five appear, along with four additional Places tabs: `places/index`, `places/search`, `places/new`, and `places/[placeId]`. | Open the signed-in Wedding workspace; the extra Places routes appear in the bottom navigation even after the hidden parent `Tabs.Screen` mitigation. | Physical Android QA confirmed the issue persisted after the previous mitigation; no screenshot/log file attached. | Final root cause: `places` lacked a nested Stack `_layout.tsx`, so Expo Router flattened its child routes into the Wedding Tabs navigator. See diagnosis and regression steps below. | Not recorded |
 | A-002 | ENVIRONMENT BLOCKER | Supplier payments; native document picker | Open supplier payment screens that import the document picker in the installed Android development client. | The installed development client provides the `ExpoDocumentPicker` native module. | Runtime error: `Cannot find native module 'ExpoDocumentPicker'`. | Run the payment flow in the currently installed Android development client. | Runtime error observed; no screenshot/log file attached. | `apps/mobile/src/suppliers/payments/screens.tsx` imports the module. `apps/mobile/package.json` already declares `expo-document-picker ~57.0.2`; the installed client predates this native dependency. Rebuild after A-001 is merged. If the rebuilt client still errors, reclassify as a product build/configuration defect. | Not recorded |
 
 Severity definitions: **BLOCKER** (journey cannot continue, security/data corruption, wrong-Wedding access, financial duplication, irreversible destructive action); **MAJOR** (important V1 function broken with workaround); **MINOR** (non-blocking visual/UX/validation issue); **POLISH** (visual consistency/copy/layout); **DEFERRED** (known physical-device or V1.1 enhancement).
+
+### A-001 diagnosis and fix
+
+**Status: OPEN — awaiting physical Android regression.** Compilation, tests, and exports do not close this finding.
+
+- **Previous diagnosis:** the parent Wedding Tabs layout omitted `places` from its hidden feature entries.
+- **Previous mitigation:** added `<Tabs.Screen name="places" options={{ href: null, title: "Wedding Places" }} />` to `apps/mobile/src/app/(wedding)/[weddingId]/_layout.tsx`.
+- **Physical QA result:** the issue persisted; four Places child routes still appeared as tabs.
+- **Final root cause:** `places/index.tsx`, `places/search.tsx`, `places/new.tsx`, and `places/[placeId].tsx` had no nested layout boundary. Expo Router flattened them into the parent Wedding Tabs navigator, so hiding `name="places"` alone was insufficient.
+- **Fix:** added `apps/mobile/src/app/(wedding)/[weddingId]/places/_layout.tsx` with the established `<Stack screenOptions={{ headerShown: false }} />` pattern. The parent hidden `places` entry is retained.
+- **Route-structure audit:** compared Places with `budget/_layout.tsx`, `website/_layout.tsx`, `seating/_layout.tsx`, and `style/_layout.tsx`; all use a nested Stack with headers hidden (Style also specifies its existing slide animation). Audited every immediate Wedding feature directory: `budget` (16 routes), `day` (3), `guests` (9), `places` (4), `plan` (8), `seating` (3), `style` (6), and `website` (8). Places was the only directory missing a boundary; all now have a nested Stack layout.
+- **Automated validation (2026-10-02):** `npm run lint`, `npm run typecheck`, `npm test` (46 files / 362 tests), Android/iOS/web `npx expo export --platform <platform>` from `apps/mobile`, root `npm run build`, `npm run build --workspace=@katipan/web`, and `git diff --check` all passed. Expo Router route-tree checks on Android, iOS, and web reproduced four flattened `places/...` children when the Places layout was excluded, and confirmed those routes are nested under `places` when it is included. The parent Tabs configuration exposes exactly Home, Plan, Guests, Budget, and More. Physical navigation/back behavior remains pending the regression below.
+
+### A-001 physical Android regression steps
+
+1. Load this fix in the physical Android development client with a fresh Metro bundle (`npm run start --workspace=@katipan/mobile -- --clear`), then fully reload the app. Record the tested commit, device, and client build.
+2. Sign in and open the expected Wedding workspace. Confirm exactly five bottom tabs in order: **Home, Plan, Guests, Budget, More**. Confirm `places/index`, `places/search`, `places/new`, and `places/[placeId]` never appear as tabs.
+3. Open **More → Manage Wedding Places** and confirm Our Places loads for the same Wedding.
+4. From Our Places, open Place Search, then use **Back to Our Places**. Open Add Custom Place, then use **Cancel**. Open an existing Place's details, then use **Back to Our Places**. Repeat these flows using Android system Back; confirm each returns to the preceding Places screen.
+5. From Our Places, use its back control or Android system Back to return to the originating workspace screen. Confirm the canonical five tabs still work after leaving and reopening Places and after reloading the Wedding workspace.
+6. Attach screenshots/device-log references and record pass/fail. Close A-001 only after all physical Android regression steps pass; otherwise keep it open with the failing route and reproduction.
 
 ## Screenshots and logs to capture manually
 
