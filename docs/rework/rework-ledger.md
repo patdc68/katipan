@@ -6,17 +6,26 @@ Agent 00 maintains this ledger. Updated 2026-11-16 for the R1 Core Workspace res
 
 | Field | Value |
 | --- | --- |
-| Current phase | R1 Core Workspace — PENDING PHYSICAL QA |
+| Current phase | R1 Core Workspace — ANDROID EMULATOR QA IN PROGRESS (BlueStacks) |
 | Foundation branch/base | `feat/r1-core-workspace` from updated `origin/master` (`8c85122`) |
 | R1 implementation commit | `4528f23` — `fix: stabilize core Wedding workspace` |
 | R1 QA evidence | `docs/qa/r1-core-workspace.md`; Gate 1 block in `docs/rework/qa-gates.md` |
 | Preserved work | wip/pre-rework-journey-a-20261116 at 4c44a01; pushed and verified during preflight |
 | Local state | `.codex/config.toml` classified `KEEP_LOCAL_UNCOMMITTED`; observed as 6 added lines before branch creation and left unchanged/unstaged |
 | Completed agent slices | R0 foundation; R1 Agent 00 preflight/reservation, Agent 02 read-only audit, Agent 01 Stitch contract, Agent 03 implementation, and Agent 10 automated QA. Agent 00 final disposition recorded as PENDING PHYSICAL QA |
-| QA gate status | Automated G1 checks PASS; physical G1 PENDING. A-003 and A-007 remain OPEN pending Android verification |
+| QA gate status | Automated G1 checks PASS; BlueStacks Android G1 in progress. A-003 and A-007 remain OPEN pending emulator regression |
+| DEV Auth QA setting | Confirm Email is ON (`mailer_autoconfirm=false`) as read from the DEV public Auth settings; manual Dashboard change to OFF is pending before fresh-account QA |
 | R1 automated test baseline | `npm.cmd test` before implementation: 46 files / 362 tests passed (Vitest 5.0.1) |
-| Release readiness | NOT READY; mandatory Android physical verification remains open |
-| Next authorized agent | Agent 00 holds R2. When the user connects the current Android development build and QA accounts, Agent 10 runs the seven pending physical scenarios; Agent 00 then records the final R1 gate decision |
+| Release readiness | NOT READY; BlueStacks development gate in progress; physical-device release smoke test remains pending |
+| Next authorized agent | Agent 10 runs BlueStacks R1 acceptance. Agent 03 acts only on an R1 defect reproduced and reserved by Agent 00. Agent 00 then records the final R1 gate decision |
+
+### R1 BlueStacks gate resumption — 2026-11-16
+
+Agent 00 rechecked `feat/r1-core-workspace` at `86aa735`, containing implementation commit `4528f23`; the only local modification is the unchanged, unstaged `.codex/config.toml` (KEEP_LOCAL_UNCOMMITTED). PR #51 is open and unmerged. BlueStacks `127.0.0.1:5555` is connected as `device` (Android 9, SM-G998B, `x86_64,x86,arm64-v8a,armeabi-v7a,armeabi`); another Android target exists, so every QA command must select the BlueStacks serial explicitly. The user has authorized the BlueStacks development gate in place of the earlier physical-device development gate. Physical-device smoke testing remains a separate release requirement.
+
+Agent 10 is the sole writer for `docs/qa/r1-core-workspace.md` and the R1 Gate 1 evidence block in `docs/rework/qa-gates.md` during this run. Agent 00 is the sole writer for this ledger. No product-code reservation is open. If Agent 10 reproduces an R1 defect, Agent 00 will reserve exact Agent 03 Core Workspace paths before implementation, followed by Agent 10 regression. R2+ feature files remain excluded. This QA reservation closes after Agent 00 records the final R1 development gate.
+
+Agent 02 inspected DEV Auth for the emulator signup path: `mailer_autoconfirm=false`, so email confirmation is currently required. The project-scoped Supabase MCP has no supported Auth-setting update. Manual DEV Dashboard action is required at Authentication → Sign In / Providers → Email → Confirm Email → OFF, followed by a fresh read showing `mailer_autoconfirm=true`. This is a DEV/QA-only setting; production verification remains required before release. The app already routes a signup with `data.session` to the authenticated root and retains its confirmation callback. No app code, migration, RLS, or database mutation is reserved for this setting.
 
 ## R1 preflight and reservation
 

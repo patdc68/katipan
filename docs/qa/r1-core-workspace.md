@@ -1,5 +1,39 @@
 # R1 Core Workspace — QA Evidence
 
+## Android acceptance policy for the resumed R1 run
+
+**ANDROID EMULATOR QA — BLUESTACKS** is the required R1 development Android gate. The earlier “PENDING PHYSICAL QA” verdict below is historical evidence from the first run; it does not describe the current target. BlueStacks results must be recorded per scenario before the development gate can pass. **PHYSICAL DEVICE RELEASE SMOKE TEST — PENDING** remains a separate release requirement for camera, push, hardware lifecycle, and QR scanning.
+
+**DEV Auth QA dependency — pending verification:** Agent 02's read-only DEV audit found `mailer_autoconfirm=false`, meaning Confirm Email is currently enabled. The project-scoped MCP has no supported Auth configuration update. Agent 00 must verify a user-made Dashboard change before Agent 10 resumes account creation. For this emulator development gate, the target DEV setting is Confirm Email disabled so the QA account can enter the normal authenticated app flow. This is a DEV-only QA setting; production must re-enable email confirmation and validate the verification signup flow before release. No setting change or authenticated scenario is claimed here.
+
+The resumed run uses BlueStacks serial `127.0.0.1:5555` explicitly because another Android target may be present. The development APK and scenario evidence will be recorded below after installation.
+
+### Resumed run environment and build
+
+| Item | Evidence |
+| --- | --- |
+| Source | `feat/r1-core-workspace` at `86aa735` |
+| Android target | BlueStacks `127.0.0.1:5555` — `device`; Android 9; model `SM-G998B`; ABIs `x86_64,x86,arm64-v8a,armeabi-v7a,armeabi` |
+| Other target | `emulator-5554` is also listed; every KATIPAN ADB action must specify `-s 127.0.0.1:5555` |
+| Build profile | `apps/mobile/eas.json` `development`: Expo development client, internal distribution |
+| Existing builds | Previous EAS development builds were from earlier commits and expired; no compatible local APK was found |
+| Current EAS build | `f762516f-bda1-4306-92b5-6d4456a722e2`, source commit `86aa735`, FINISHED at 2026-11-16 13:26:55 UTC |
+| APK | `katipan-r1-f762516f.apk` in the user temp directory; 275,072,503 bytes; SHA-256 `0F20671DB48B0B2DF123EC645867CC391CD9111B8CDCF13D153986C6AFDB139A` |
+| Installation | `adb -s 127.0.0.1:5555 install -r` returned `Success`; `pm list packages` confirms `com.inventrasystems.katipan`, version `1.0.0` / versionCode `1` |
+| Launcher | Resolved with `cmd package resolve-activity --brief`: `com.inventrasystems.katipan/.MainActivity` |
+| Metro | Started from `apps/mobile` with `expo start --dev-client --host lan --port 8081`; listening on `http://localhost:8081`, `.env.local` loaded (values not recorded) |
+| Metro connection | BlueStacks host gateway `10.0.2.2` is reachable; the development-client deep link to `http://10.0.2.2:8081` loaded the current JavaScript bundle |
+| Signed-out launch | App displayed its normal welcome screen; [redacted, credential-free screenshot](evidence/r1-bluestacks-signed-out.png). The normal account-creation form is reachable. |
+| Authenticated scenarios | PENDING Agent 00 verification of the DEV Confirm Email Dashboard setting and normal app sign-up; no authenticated scenario is yet PASS |
+
+One native launch crash occurred on the first development-client introduction after Metro loaded: logcat recorded `Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR)` on `mqt_v_js`, with x86_64 `libhermesvm.so` in the backtrace. A force-stop and second launch from the same build and Metro URL stayed alive and displayed the signed-out welcome screen. This is an emulator/native launch observation; repeatability and effect on R1 acceptance remain under QA review. No app code was changed by Agent 10.
+
+### Resumed automated regression
+
+At source commit `86aa735`, `npm.cmd run lint` passed with the same four mobile warnings and zero errors; `npm.cmd run typecheck` passed; focused R1 tests passed 6 files / 55 tests; and `npm.cmd test` passed 47 files / 383 tests, unchanged from the first R1 run. Android Expo export passed with 2,002 modules, iOS Expo export passed with 1,870 modules, and `npm.cmd run build` passed the mobile web export and Next.js production build. `git diff --check` passed for the QA documentation edits. An added-line secret scan found zero matches. A whole-file pattern scan found only a historical QA documentation example pattern, not a credential.
+
+After documenting the pending DEV Auth setting, focused `auth/email`, `auth/session`, and onboarding API/model tests passed 4 files / 23 tests. `git diff --name-only -- apps/mobile` was empty, so the documentation update did not alter the app code validated above.
+
 **QA recommendation:** PENDING PHYSICAL QA
 **Run date:** 2026-11-16
 **Branch:** `feat/r1-core-workspace`
