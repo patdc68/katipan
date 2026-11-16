@@ -267,6 +267,22 @@ Recommended metadata includes:
 
 Supplier, Guest, Dress Code, Wedding Website, and other domain tables should reference Attachment IDs rather than duplicating Storage locators.
 
+## V1 rework agent contracts
+
+CANVA INTEGRATION IS APPROVED FOR V1. Canva replaces native invitation graphic design only: artwork, graphic layout, invitation fonts, decoration, and invitation photos/design. KATIPAN must not recreate Canva.
+
+Canva does NOT replace RSVP, Wedding Website, Guest Guide, Guest data, Seating, Guest Pass, Wedding-Day QR, check-in, Guest Program, or Run of Show. Invitation artwork and RSVP authorization are separate concerns. Preserve both the invitation/RSVP QR and the individual Guest Pass QR; seating completion is never a prerequisite for Guest Pass availability.
+
+Read [the product contract](docs/rework/product-contract.md), [domain ownership](docs/rework/domain-ownership.md), and the applicable runbook under [.agents/agents](.agents/agents) before a rework slice. The [implementation sequence](docs/rework/implementation-sequence.md), [QA gates](docs/rework/qa-gates.md), and [mobile quality contract](docs/rework/mobile-quality-contract.md) govern progression. Historical feature notes that deferred physical QA do not waive these rework gates.
+
+No agent may modify another agent's domain contract merely to unblock itself. When a cross-domain blocker is discovered: **STOP the dependent work -> document the required contract change -> hand it to the owning agent**. Record caller/callee, current and proposed behavior, security impact, compatibility, tests, and the blocked phase in the [rework ledger](docs/rework/rework-ledger.md). Independent authorized work may continue.
+
+Agent 00 owns sequencing and grants one writer per file/contract at a time. Domain agents own semantic contracts; Agent 02 is the sole implementation authority for migrations, RLS, RPC/Edge contracts, and generated database types, in collaboration with that domain owner. Agent 01 owns shared visual primitives/tokens; Agent 03 owns navigation and session infrastructure. A route's directory does not override explicit domain ownership.
+
+Query Stitch and audit Supabase contracts before UI implementation. Preserve verified contracts; client inconvenience is not a reason for schema changes. The R0 foundation is documentation only: no product code, migrations, Edge implementation, DEV mutation, deployment, code deletion, or automatic merge. Later runbooks describe responsibilities, not authorization to start future phases.
+
+Before rework, inspect Git status, branch, unstaged/staged diffs, and relevant history. Classify every uncommitted file as COMMIT_CURRENT_BRANCH, PRESERVE_ON_SNAPSHOT_BRANCH, KEEP_LOCAL_UNCOMMITTED, DISCARD, or DEFER_DECISION; record evidence and action. Preserve useful out-of-scope work remotely before changing base. Stop on unresolved intent. Keep local `.codex/config.toml` untouched and unstaged; do not stash/reset it. The pre-rework Journey A snapshot is `wip/pre-rework-journey-a-20261116` at `4c44a01`; it is evidence, not an approved patch set to merge wholesale.
+
 ## Scope discipline
 
 Explicitly out of V1 unless separately approved:
@@ -275,7 +291,7 @@ Explicitly out of V1 unless separately approved:
 - advanced venue floor-plan editor
 - AI seating
 - AI motif generation
-- Canva integration
+- native invitation graphic-design engine (superseded by approved Canva integration)
 - custom wedding domains
 - video invitations
 - native Katipan group chat
