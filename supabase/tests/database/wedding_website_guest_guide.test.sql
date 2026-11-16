@@ -7,7 +7,7 @@ insert into auth.users(id,aud,role,email,raw_app_meta_data,raw_user_meta_data,cr
 ('00000000-0000-0000-0000-000000000803','authenticated','authenticated','website-day-of@katipan.test','{}','{}',now(),now());
 insert into public.weddings(id,origin,status,ownership_mode,created_by_user_id,display_name,wedding_date) values
 ('10000000-0000-0000-0000-000000000801','COUPLE_CREATED','ACTIVE','COUPLE_OWNED','00000000-0000-0000-0000-000000000801','Guide Wedding A','2027-02-01'),
-('10000000-0000-0000-0000-000000000802','COUPLE_CREATED','ACTIVE','COUPLE_OWNED','00000000-0000-0000-0000-000000000802','Guide Wedding B','2027-03-01');
+('10000000-0000-0000-0000-000000000802','COUPLE_CREATED','DRAFT','COUPLE_OWNED','00000000-0000-0000-0000-000000000802','Guide Wedding B','2027-03-01');
 insert into public.wedding_memberships(wedding_id,user_id,role) values
 ('10000000-0000-0000-0000-000000000801','00000000-0000-0000-0000-000000000801','OWNER'),
 ('10000000-0000-0000-0000-000000000802','00000000-0000-0000-0000-000000000802','OWNER'),
@@ -81,8 +81,15 @@ do $$ begin
     raise exception 'Duplicate slug succeeded';
   exception when unique_violation then null; end;
 end $$;
-insert into website_test_tokens values ('other-wedding',public.issue_household_website_token('20000000-0000-0000-0000-000000000803'));
 select public.publish_wedding_website('10000000-0000-0000-0000-000000000802',true);
+do $$ begin
+  if (select status from public.weddings where id='10000000-0000-0000-0000-000000000802') <> 'ACTIVE'
+    or not (select is_published from public.wedding_websites where slug='guide-wedding-b')
+    or (select published_at from public.wedding_websites where slug='guide-wedding-b') is null then
+    raise exception 'Confirm Publish did not activate and publish the draft Wedding';
+  end if;
+end $$;
+insert into website_test_tokens values ('other-wedding',public.issue_household_website_token('20000000-0000-0000-0000-000000000803'));
 
 set local role postgres;
 insert into private.household_website_tokens(wedding_id,household_id,token_hash,created_at,expires_at)
@@ -159,6 +166,8 @@ begin
     raise exception 'Guest from another Wedding succeeded';
   exception when insufficient_privilege then null; end;
   select token into other_token from website_test_tokens where label='other-wedding';
+  select public.guest_wedding_guide('guide-wedding-b',other_token) into j;
+  if j->>'slug' <> 'guide-wedding-b' then raise exception 'Published draft Wedding guest page is unavailable'; end if;
   begin
     perform public.guest_submit_rsvp('guide-wedding-b',other_token,'40000000-0000-0000-0000-000000000801','ATTENDING');
     raise exception 'Guest from another Wedding succeeded with the other Household token';

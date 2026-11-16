@@ -182,6 +182,7 @@ function GuestDetailsContent({
 
   return (
     <KatipanScreen contentContainerStyle={styles.page}>
+      <KatipanButton label="Back to Guest List" variant="text" onPress={() => router.replace({ pathname: "/(wedding)/[weddingId]/guests/list", params: { weddingId } })} />
       <View style={styles.titleBlock}>
         <KatipanText variant="labelCaps" color="secondary">GUEST / INDIVIDUAL DETAILS</KatipanText>
         <View style={styles.personHeading}>

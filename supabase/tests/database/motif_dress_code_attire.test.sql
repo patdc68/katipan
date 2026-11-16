@@ -161,6 +161,16 @@ with created as (
 insert into styling_test_state (label, value)
 select 'dress-code-a', id from created;
 
+update public.wedding_dress_codes
+set title = 'Garden Formal Updated'
+where id = (select value from styling_test_state where label = 'dress-code-a');
+
+select extensions.is(
+  (select title from public.wedding_dress_codes where id = (select value from styling_test_state where label = 'dress-code-a')),
+  'Garden Formal Updated',
+  'Owner can update Dress Code fields without updating wedding_id'
+);
+
 insert into public.motif_colors (
   wedding_id,
   motif_id,

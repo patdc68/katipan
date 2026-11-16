@@ -1,10 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useAccess } from "../onboarding/provider";
 import { loadActiveMemberships } from "./api";
 import {
+  canRetainLastVerifiedMembership,
   findActiveMembership,
+  LatestWorkspaceRequest,
   nextWorkspaceCacheRevision,
   resolveRestoredSelection,
   type WorkspaceMembership,
@@ -60,18 +62,28 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorUserId, setErrorUserId] = useState<string | null>(null);
+  const sessionUserId = session?.user.id ?? null;
+  const sessionUserIdRef = useRef(sessionUserId);
+  const workspaceStateRef = useRef({ memberships, membershipsUserId, selectedWeddingId });
+  useLayoutEffect(() => {
+    sessionUserIdRef.current = sessionUserId;
+    workspaceStateRef.current = { memberships, membershipsUserId, selectedWeddingId };
+  }, [memberships, membershipsUserId, selectedWeddingId, sessionUserId]);
+  const workspaceRequests = useRef(new LatestWorkspaceRequest());
 
   useEffect(() => {
     let current = true;
-    const userId = session?.user.id ?? null;
+    const isCurrentRequest = workspaceRequests.current.begin();
+    const userId = sessionUserId;
+    const previous = workspaceStateRef.current;
     if (accessLoading) return () => { current = false; };
     if (!userId) {
       void Promise.resolve().then(() => {
-        if (!current) return;
+        if (!current || !isCurrentRequest()) return;
         setMemberships([]);
         setMembershipsUserId(null);
         setSelectedWeddingId(null);
-        setCacheRevision((revision) => revision + 1);
+        if (previous.membershipsUserId !== null) setCacheRevision((revision) => revision + 1);
         setError(null);
         setErrorUserId(null);
         setLoading(false);
@@ -87,28 +99,36 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setErrorUserId(userId);
       try {
         const [activeMemberships, savedId] = await Promise.all([loadActiveMemberships(userId), readSelectedWeddingId()]);
-        if (!current) return;
+        if (!current || !isCurrentRequest() || sessionUserIdRef.current !== userId) return;
         const selection = resolveRestoredSelection(savedId, activeMemberships);
         setMemberships(activeMemberships);
         setMembershipsUserId(userId);
         setSelectedWeddingId(selection);
-        setCacheRevision((revision) => revision + 1);
+        setCacheRevision((revision) => previous.membershipsUserId === userId
+          ? nextWorkspaceCacheRevision(revision, previous.selectedWeddingId, selection)
+          : revision + 1);
         void storeSelectedWeddingId(selection);
       } catch {
-        if (!current) return;
-        setMemberships([]);
-        setMembershipsUserId(userId);
-        setSelectedWeddingId(null);
-        setError("We couldn't load your Wedding workspaces. Check your connection and try again.");
-        setErrorUserId(userId);
+        if (!current || !isCurrentRequest() || sessionUserIdRef.current !== userId) return;
+        if (canRetainLastVerifiedMembership(userId, previous.membershipsUserId, previous.memberships)) {
+          // A failed refresh does not revoke the last RLS-verified membership.
+          // Keep it mounted; database policies still authorize every data request.
+          setError(null);
+          setErrorUserId(null);
+        } else {
+          setMemberships([]);
+          setMembershipsUserId(userId);
+          setSelectedWeddingId(null);
+          setError("We couldn't load your Wedding workspaces. Check your connection and try again.");
+          setErrorUserId(userId);
+        }
       } finally {
-        if (current) setLoading(false);
+        if (current && isCurrentRequest() && sessionUserIdRef.current === userId) setLoading(false);
       }
     });
     return () => { current = false; };
-  }, [accessLoading, session?.user.id]);
+  }, [accessLoading, sessionUserId]);
 
-  const sessionUserId = session?.user.id ?? null;
   const dataBelongsToSession = Boolean(sessionUserId && membershipsUserId === sessionUserId);
   const currentMemberships = useMemo(() => dataBelongsToSession ? memberships : [], [dataBelongsToSession, memberships]);
   const currentSelectedWeddingId = dataBelongsToSession ? selectedWeddingId : null;
@@ -123,37 +143,54 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const refreshMemberships = useCallback(async (preferredWeddingId?: string) => {
     const userId = session?.user.id;
     if (!userId) throw new Error("A signed-in account is required.");
+    const previous = workspaceStateRef.current;
+    const isCurrentRequest = workspaceRequests.current.begin();
     setLoading(true);
     setError(null);
+    let confirmedMissingPreference = false;
     try {
       const activeMemberships = await loadActiveMemberships(userId);
-      const savedId = preferredWeddingId ?? await readSelectedWeddingId();
+      if (!isCurrentRequest() || sessionUserIdRef.current !== userId) throw new Error("Workspace refresh was superseded.");
+      const savedId = preferredWeddingId ?? await readSelectedWeddingId() ?? previous.selectedWeddingId;
+      if (!isCurrentRequest() || sessionUserIdRef.current !== userId) throw new Error("Workspace refresh was superseded.");
       const selection = preferredWeddingId
         ? findActiveMembership(activeMemberships, preferredWeddingId)?.weddingId ?? null
         : resolveRestoredSelection(savedId, activeMemberships);
       setMemberships(activeMemberships);
       setMembershipsUserId(userId);
       if (preferredWeddingId && !selection) {
+        confirmedMissingPreference = true;
         setSelectedWeddingId(null);
-        setCacheRevision((revision) => revision + 1);
+        setCacheRevision((revision) => nextWorkspaceCacheRevision(revision, previous.selectedWeddingId, null));
         await storeSelectedWeddingId(null);
         throw new Error("Wedding membership is no longer active.");
       }
       setSelectedWeddingId(selection);
-      setCacheRevision((revision) => revision + 1);
+      setCacheRevision((revision) => previous.membershipsUserId === userId
+        ? nextWorkspaceCacheRevision(revision, previous.selectedWeddingId, selection)
+        : revision + 1);
       setError(null);
       setErrorUserId(userId);
       await storeSelectedWeddingId(selection);
+      if (!isCurrentRequest() || sessionUserIdRef.current !== userId) throw new Error("Workspace refresh was superseded.");
       return activeMemberships;
     } catch {
-      setError("We couldn't verify that Wedding workspace. Refresh your memberships and try again.");
-      setErrorUserId(userId);
-      setMembershipsUserId(userId);
-      setMemberships([]);
-      setSelectedWeddingId(null);
+      if (!isCurrentRequest() || sessionUserIdRef.current !== userId) {
+        throw new Error("Wedding membership could not be verified.");
+      }
+      if (confirmedMissingPreference) {
+        setError("We couldn't verify that Wedding workspace. Refresh your memberships and try again.");
+        setErrorUserId(userId);
+      } else if (!canRetainLastVerifiedMembership(userId, previous.membershipsUserId, previous.memberships)) {
+        setError("We couldn't verify that Wedding workspace. Refresh your memberships and try again.");
+        setErrorUserId(userId);
+        setMemberships([]);
+        setMembershipsUserId(userId);
+        setSelectedWeddingId(null);
+      }
       throw new Error("Wedding membership could not be verified.");
     } finally {
-      setLoading(false);
+      if (isCurrentRequest() && sessionUserIdRef.current === userId) setLoading(false);
     }
   }, [session?.user.id]);
 
@@ -167,7 +204,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const setSelectedWedding = useCallback((weddingId: string) => {
     const membership = findActiveMembership(currentMemberships, weddingId);
     if (!membership) throw new Error("Wedding membership is unavailable.");
-    if (currentSelectedWeddingId !== weddingId) setCacheRevision((revision) => nextWorkspaceCacheRevision(revision, currentSelectedWeddingId, weddingId));
+    if (currentSelectedWeddingId !== weddingId) {
+      workspaceRequests.current.begin();
+      setCacheRevision((revision) => nextWorkspaceCacheRevision(revision, currentSelectedWeddingId, weddingId));
+    }
     setSelectedWeddingId(weddingId);
     void storeSelectedWeddingId(weddingId);
     return membership;

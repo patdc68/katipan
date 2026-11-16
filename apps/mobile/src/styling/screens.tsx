@@ -543,7 +543,7 @@ function InfoField({ label, value, empty }: { label: string; value: string | nul
 function PageHeading({ title, subtitle, weddingId }: { title: string; subtitle: string; weddingId: string }) {
   const router = useRouter();
   return <>
-    <KatipanButton label="Wedding Styling" variant="text" onPress={() => pushRoute(router, "/(wedding)/[weddingId]/style", { weddingId })} />
+    <KatipanButton label="Back to Wedding Styling" variant="text" onPress={() => pushRoute(router, "/(wedding)/[weddingId]/style", { weddingId })} />
     <SectionHeader title={title} eyebrow="Wedding styling" description={subtitle} />
   </>;
 }

@@ -54,7 +54,9 @@ export default function WebsitePreviewScreen() {
         {confirm === null ? <KatipanButton label={site.is_published ? "Unpublish" : "Publish"}
           variant={site.is_published ? "secondary" : "primary"} onPress={() => setConfirm(!site.is_published)} />
           : <><KatipanText variant="headlineSmall">{confirm ? "Make this website live?" : "Take this website offline?"}</KatipanText>
-            <KatipanText color="textMuted">Website details, sections, and Guest Program remain saved.</KatipanText>
+            <KatipanText color="textMuted">{confirm && state.membership?.wedding.status === "DRAFT"
+              ? "Publishing also activates this draft Wedding so guests can access its live page."
+              : "Website details, sections, and Guest Program remain saved."}</KatipanText>
             <View style={websiteStyles.row}><KatipanButton label="Cancel" variant="secondary" onPress={() => setConfirm(null)} />
               <KatipanButton label={confirm ? "Confirm publish" : "Confirm unpublish"} loading={state.saving}
                 onPress={() => void state.mutate(async () => { await setWebsitePublication(state.membership!, confirm); setConfirm(null); })} /></View></>}

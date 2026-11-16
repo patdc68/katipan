@@ -1,10 +1,10 @@
 # Journey A — Couple Integration QA
 
-**Run status:** IN PROGRESS — PAUSED FOR QA FINDINGS. A01 passed and the first physical Android checkpoint is complete. Broader Journey A testing is paused pending the navigation defect fix and the Android development-client rebuild. The Phase 0 Edge/database test-runner limitation remains unresolved.
+**Run status:** IN PROGRESS - automated branch checks pass; DEV verification and physical Android regression remain pending.
 
 **QA branch:** `qa/journey-a-couple`
 **Base commit:** `22e15bb8659a1cdb3565c449fcdd886946501e6c` (`master` at branch creation; merged Coordinator/Team PR #46)
-**Run date:** 2026-09-28; continued 2026-10-02 (Asia/Manila)
+**Run date:** 2026-09-28 initial preflight; follow-up checks 2026-10-07 and 2026-10-08 (Asia/Manila)
 **Application:** KATIPAN mobile-first V1; linked DEV only
 
 ## Environment and test identity
@@ -19,7 +19,7 @@
 
 ## Scope and handling
 
-- This QA branch changes documentation only; product code, migrations, and Supabase data were not changed.
+- The original `qa/journey-a-couple` preflight branch changed documentation only. Follow-up code and local migration work is on `codex/journey-a-fixes`; no Supabase data was changed.
 - No `supabase db reset --linked`, remote migration, or DEV write was run. The Expo platform exports produce bundles, not an installable Android APK; no native APK build or installation was attempted.
 - `.codex/config.toml` had a pre-existing uncommitted modification when work began. It was not read, edited, staged, or included in the QA document. Keep it out of any QA commit.
 - Follow `AGENTS.md` product invariants and `docs/ui/stitch-ui-source-of-truth.md` when comparing screens. That UI note documents Warm Editorial Nuptial and Stitch screen mappings; current Expo Router files were inspected for implemented routes.
@@ -83,11 +83,11 @@ Generated types are in `packages/database/src/database.types.ts`; the file inclu
 - KATIPAN restored the expected existing Wedding workspace.
 - The expected Wedding belonged to the signed-in account.
 
-**Conclusion:** This is not a session-isolation defect. The first physical Android checkpoint is complete. No Wedding/User IDs or account secrets were recorded.
+**Conclusion:** This single sign-in/sign-out checkpoint passed; it did not exercise the overlapping auth and membership restoration sequence later recorded as A-003. No Wedding/User IDs or account secrets were recorded.
 
 ## Manual phases
 
-The remaining phases below are **PAUSED — not run** pending A-001's navigation fix and a rebuilt Android development client for A-002. The Phase 0 Edge-test limitation remains an environment limitation; it is tracked separately from the observed product finding.
+The remaining manual phases are **PAUSED - not run** until the Android development client is rebuilt and the physical regression steps below pass. Automated checks and local code inspection do not close device findings.
 
 ### Phase 1 — Fresh account
 
@@ -286,8 +286,51 @@ Use phase-numbered names such as `A01-welcome.png`, `A02-wedding-details.png`, `
 - During Journey A, use one fresh Couple account pair and the single canonical Wedding, then only the minimum controlled Guests, places, tasks, finance rows, and program entries needed by the phases.
 - Keep unrelated pre-existing DEV data untouched. Do not permanently archive the only Place needed later. At the end, list only test-owned data for cleanup; do not run broad deletion/reset operations as part of this QA run.
 
-## Current verdict
+## Current verdict and Journey A fix-branch status
 
-**Journey A: IN PROGRESS — PAUSED FOR QA FINDINGS.** A01 passed: sign-in restored the expected Wedding for the signed-in account, so no session-isolation defect was found. A-001 is a MAJOR product-code defect because Places routes appear in the Couple bottom navigation. A-002 is an environment blocker because the installed Android development client lacks the declared ExpoDocumentPicker native module. Broad Android Journey A testing resumes after the navigation fix is merged and the development client is rebuilt. The Phase 0 Deno/Docker limitation remains an environment limitation; pgTAP/Edge tests could not run locally. No DEV fixtures were created.
+**Fix branch:** `codex/journey-a-fixes` (no merge or deployment performed).
 
-**Completed first physical Android checkpoint (A01):** The tester intentionally logged out, signed back in, and confirmed that KATIPAN restored the expected existing Wedding workspace belonging to that account. This checkpoint passed and was not a session-isolation defect.
+The original A01 physical checkpoint remains a pass. The findings below have local code fixes or migration changes prepared, but the app and migration remain unapplied in DEV. This follow-up therefore records implementation and automated evidence separately from DEV and device verification. All physical Android retests remain pending; no Android device or `adb` is available in this session.
+
+### Finding status
+
+| Finding / branch status | Local implementation and automated evidence | Physical Android / DEV retest status |
+| --- | --- | --- |
+| A-001 Places tabs (FIXED IN CODE; device confirmation OPEN) | Rechecked the nested Places Stack boundary and hidden parent tab entry; tab glyphs are now a consistent SVG set. Android export and source route checks are recorded with the build results below. | Physical Android retest required: exactly five tabs, Places routes remain nested, and Places Back/system Back return correctly. |
+| A-002 document picker (dependency present; installed-client finding OPEN) | `expo-document-picker@57.0.2` is declared and installed; Android export checks the JS bundle. This cannot add a native module to an already installed development client. | Rebuild/install the Android development client, then open the document picker from a Supplier payment. |
+| A-003 workspace restore (FIXED IN CODE; device retest OPEN) | Added latest-request guards for overlapping initial session snapshots, auth events, wedding restore, and membership refreshes. Vitest covers a stale initial snapshot, overlapping restores, superseded workspace reads, and retaining only the same account's previously verified membership. | Physical Android retest required: resume/sign in, exercise overlapping auth refreshes, then open Plan and Guests; confirm the Owner never sees “Wedding workspace unavailable.” |
+| A-005 numeric Budget keyboard (CONFIG FIXED IN CODE; device retest OPEN) | Android config now uses `softwareKeyboardLayoutMode: resize`; typecheck and Android export validate the config/bundle. | Physical Android retest required with the numeric keyboard open on Budget amount fields; verify the focused input and entered value remain visible while scrolling. |
+| A-006 nested Back controls (FIXED IN CODE; device retest OPEN) | Added or clarified visible Back actions across Guest, Entourage, Styling, Seating, Places, and existing nested task, Budget, Supplier, Website, and Run of Show screens. | Physical Android retest required for each nested route and Android system Back behavior. |
+| A-007 Home system Back (FIXED IN CODE; device retest OPEN) | Auth success replaces the auth route with the root route; Android Home consumes hardware Back and exits instead of exposing Sign In. | Physical Android retest required: press system Back on authenticated Home, reopen the app, and confirm the signed-in Wedding returns. |
+| A-008 Guest Pass (MIGRATION PREPARED; unresolved in DEV) | Local migration permits eligible Owner/Full Coordinator pass management in DRAFT Weddings while guest-facing lookup remains active-only. A draft Owner/ATTENDING Guest SQL regression case was added. | SQL test was not run and migration was not applied. Verify Owner issue/view/rotate for an ATTENDING Guest after the migration is applied in DEV. |
+| A-009 Dress Code / Attire Group (FIXED IN CODE; database/DEV verification OPEN) | Dress Code and Motif saves now insert or update only allowed mutable fields instead of upserting `wedding_id`. Vitest covers Owner Dress Code create/update and dependent Attire Group creation; a database RLS assertion was added. | Automated app test passed. Database RLS test could not run locally; verify Dress Code save and Attire Group creation in the DEV app. |
+| A-010 Supplier payments path (PATH CLARIFIED IN CODE; device retest OPEN) | Budget Item now names the Supplier Details and Payment Schedule path; the item row exposes “Supplier Details & Payments.” The finance model is unchanged. | Physical Android retest required: follow the path and confirm installments and payment actions are discoverable. |
+| A-011 website Publish (MIGRATION PREPARED; unresolved in DEV) | Local migration row-locks the Wedding, authorizes lifecycle management, and atomically activates a DRAFT Wedding on confirmed Publish. The SQL regression checks ACTIVE/published state and the guest guide page. | SQL test was not run and migration was not applied. Verify Confirm Publish and the live guest page in DEV after authorized rollout. |
+| Run of Show (UI FIXED; DRAFT POLICY PREPARED; SQL/DEV verification OPEN) | Draft Owners can manage operational timeline items; a visible “Add Operational Item” action is present in the Timeline heading and empty state. Guest Program remains separate. Vitest covers Draft role eligibility; database assertions cover timeline/dashboard visibility, Guest Program separation, check-in denial, and unauthorized roles. | SQL test was not run. Physical Android retest required: create an item and verify it appears on the timeline and Wedding-Day dashboard without creating a Guest Program entry. |
+| Date selection (PICKERS IN PLACE; device timezone retest OPEN) | Supplier commitment date now uses the shared date picker. Wedding, task, installment, payment, Run of Show, and Guest Program date selections use native or browser calendar/date-time pickers; date-only values retain local calendar semantics. | Physical Android retest required for selection, saved value, validation, and timezone behavior. |
+| Tab icon visual audit (UNRESOLVED visual comparison) | Matching Stitch screens were queried before the SVG change. Their screenshot/HTML payloads were inaccessible from this workspace; the exact limitation and intentional SVG adaptation are documented in `docs/ui/journey-a-navigation-icons.md`. | Unresolved visual comparison against the actual Stitch screens; automated checks do not verify glyph fidelity. |
+
+### Pre-fix reproduction notes
+
+| Findings | Reproduction evidence before the fix | Limit |
+| --- | --- | --- |
+| A-001 / A-002 | Existing Journey A physical QA records capture the extra Places tabs and the missing `ExpoDocumentPicker` native module. | This follow-up had no Android device; regression remains open. |
+| A-003 | The out-of-order race is reproduced in the regression test: an initial session snapshot is invalidated by auth events, and a slower prior account restore cannot commit after a newer restore completes. | Automated concurrency reproduction; not an on-device reproduction. |
+| A-005 / A-006 / A-007 / A-010 / date selection | Existing Android findings were traced to the numeric-field window resize setting, missing nested controls / auth history, the Budget-to-Supplier route, and the manually typed Supplier commitment date. | Source-level reproduction/audit only in this follow-up; on-device keyboard, Back, discoverability, and picker behavior remain open. |
+| A-008 | The reported Owner/ATTENDING Guest denial matched the Guest Pass helper's active-only Wedding gate; the local SQL case now exercises an Owner issuing a pass for an ATTENDING Guest in a draft. | No remote probe or persistent DEV write in this follow-up; pgTAP not run locally. |
+| A-009 | A rollback-only DEV Owner Dress Code save reproduced `42501 permission denied for table wedding_dress_codes`; the client upsert attempted an UPDATE including protected `wedding_id`. | No persistent DEV write; app mock test passes, database assertion not run locally. |
+| A-011 | A rollback-only DEV Owner publish on a DRAFT Wedding reproduced `23514 Only an active Wedding may publish a website`; the publish function's active-only lifecycle check was the cause. | No persistent DEV write; migration and guest-page SQL regression not applied or run. |
+| Run of Show | The supplied `1000033763.mp4` finding reports “All 0” and no visible creation action. Source inspection found DRAFT Owners failed the management check that gated both add actions. | The video file was not available in the workspace; model coverage is automated, device and SQL retests remain open. |
+### Verification and limitations
+
+- `npm.cmd test`: **PASS**, 46 files / 368 tests, including focused overlap, workspace, styling API, and Run of Show model tests.
+- `npm.cmd run lint`: **PASS** after the final source changes (`npm.cmd run lint`).
+- `npm.cmd run typecheck`: **PASS** after the final source changes (`npm.cmd run typecheck`).
+- Android Expo export: **PASS** (`expo export --platform android`), output written to a task-specific temporary directory. `expo config --json` resolves `softwareKeyboardLayoutMode` as `resize`. The export is a JS bundle, not an installable APK or proof of native-module availability.
+- SQL/pgTAP tests: **NOT RUN**. Docker and `psql` are not available. Deno is not available for Edge tests. No remote database change or fixture write was performed.
+- Physical Android: **NOT RETESTED**. `adb` and a connected Android device are unavailable. Automated export does not verify IME layout, system Back, native document picker availability, or on-device navigation.
+- `npm.cmd run build`: **PASS** after the final source changes (Expo web export and Next.js production build). `git diff --check`: **PASS** after the final QA edit.
+
+**DEV-only handling:** work stayed on the local fix branch. No production environment, remote migration, deployment, merge, or persistent DEV write was used. A-008, A-011, and Run of Show migration behavior remain unverified in DEV until a separately authorized rollout and regression run.
+
+Google Place photos remain deferred.

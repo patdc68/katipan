@@ -182,7 +182,7 @@ function ItemRow({
         </View>
       </Pressable>
       {supplierLabel && supplierId && onSupplierPress && (
-        <KatipanButton label="View Supplier Details" variant="text" onPress={onSupplierPress} />
+        <KatipanButton label="Supplier Details & Payments" variant="text" onPress={onSupplierPress} />
       )}
     </EditorialCard>
   );

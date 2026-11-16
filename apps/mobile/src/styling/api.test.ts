@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceMembership } from "../workspace/model";
-import { saveStylingColor, setAttireGroupGuestTarget } from "./api";
+import { saveAttireGroup, saveStylingColor, saveWeddingDressCode, setAttireGroupGuestTarget } from "./api";
 
 const { supabaseMock } = vi.hoisted(() => ({
   supabaseMock: {
@@ -69,6 +69,7 @@ function makeQuery(table: string, callNumber: number, options: { foreignGuest?: 
   });
   builder.maybeSingle = vi.fn(async () => {
     if (table === "attire_groups") return { data: { id: filters.get("id"), wedding_id: weddingId, dress_code_id: filters.get("dress_code_id") } as MockRow, error: null };
+    if (table === "wedding_dress_codes") return { data: callNumber === 1 ? null : { id: dressCodeId, wedding_id: weddingId } as MockRow, error: null };
     if (table === "guests") return { data: options.foreignGuest ? { id: guestId, wedding_id: "another-wedding" } : { id: guestId, wedding_id: weddingId } as MockRow, error: null };
     if (table === "motif_colors" && callNumber === 1) return { data: { sort_order: 2 }, error: null };
     if (table === "motif_colors") return { data: { id: "motif-color", wedding_id: weddingId }, error: null };
@@ -89,6 +90,32 @@ describe("styling direct RLS writes", () => {
         .rejects.toMatchObject({ code: "42501" });
     }
     expect(supabaseMock.from).not.toHaveBeenCalled();
+  });
+
+  it("creates a Dress Code with INSERT and can create its Attire Group as an Owner", async () => {
+    const queries: { table: string; builder: QueryBuilder; filters: Map<string, unknown>; writes: { method: string; row?: Record<string, unknown>; options?: Record<string, unknown> }[] }[] = [];
+    supabaseMock.from.mockImplementation((table: string) => {
+      const query = makeQuery(table, queries.filter((item) => item.table === table).length + 1);
+      queries.push({ table, ...query });
+      return query.builder;
+    });
+
+    await saveWeddingDressCode(membership("OWNER"), { title: "Garden formal", description: "", venueAdvice: "", generalNotes: "" });
+    await saveWeddingDressCode(membership("OWNER"), { title: "Garden formal updated", description: "Ceremony attire", venueAdvice: "Grass-friendly shoes", generalNotes: "" });
+    await saveAttireGroup(membership("OWNER"), dressCodeId, { title: "Principal Sponsors", description: "", instructions: "" });
+
+    const dressWrites = queries.filter((item) => item.table === "wedding_dress_codes").flatMap((item) => item.writes);
+    expect(dressWrites).toEqual([
+      { method: "insert", row: {
+        wedding_id: weddingId, title: "Garden formal", description: null, venue_advice: null, general_notes: null,
+      } },
+      { method: "update", row: {
+        title: "Garden formal updated", description: "Ceremony attire", venue_advice: "Grass-friendly shoes", general_notes: null,
+      } },
+    ]);
+    const groupWrite = queries.filter((item) => item.table === "attire_groups").flatMap((item) => item.writes)
+      .find((write) => write.method === "insert");
+    expect(groupWrite?.row).toMatchObject({ wedding_id: weddingId, dress_code_id: dressCodeId, title: "Principal Sponsors" });
   });
 
   it("adds a Guest to the selected group without replacing other group assignments", async () => {

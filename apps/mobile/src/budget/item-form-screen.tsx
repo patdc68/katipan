@@ -243,8 +243,8 @@ export function BudgetItemEditorScreen({ expenseMode = false }: { expenseMode?: 
               />)}
             </View>}
           </>}
-          {selectedSupplier && <KatipanText variant="bodySmall" color="textMuted">Supplier actual payments are managed separately. This Budget Item cannot store an actual amount while it is linked to a Supplier.</KatipanText>}
-          {selectedSupplier && <KatipanButton label="View Supplier Details" variant="secondary" disabled={saving} onPress={() => router.push(supplierHref(resource.weddingId, selectedSupplier.id))} />}
+          {selectedSupplier && <KatipanText variant="bodySmall" color="textMuted">Supplier actual payments are managed separately. Open Supplier Details, then Payment Schedule to add installments or record a payment. This Budget Item cannot store an actual amount while it is linked to a Supplier.</KatipanText>}
+          {selectedSupplier && <KatipanButton label="Open Supplier Details & Payment Schedule" variant="secondary" disabled={saving} onPress={() => router.push(supplierHref(resource.weddingId, selectedSupplier.id))} />}
           {fieldError.supplierId && <KatipanText variant="bodySmall" color="error">{fieldError.supplierId}</KatipanText>}
         </View>}
 

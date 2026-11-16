@@ -49,6 +49,7 @@ export default function GuestListScreen() {
 
   return (
     <KatipanScreen contentContainerStyle={styles.page}>
+      <KatipanButton label="Back to Guests Home" variant="text" onPress={() => router.replace({ pathname: "/(wedding)/[weddingId]/guests", params: { weddingId } })} />
       <View style={styles.titleBlock}>
         <KatipanText variant="labelCaps" color="secondary">GUESTS & INVITATIONS</KatipanText>
         <KatipanText variant="headlineLarge" accessibilityRole="header">Guest List</KatipanText>

@@ -31,7 +31,7 @@ export const runDraftSchema = z.object({
 export type RunDraft = z.input<typeof runDraftSchema>;
 
 export function canManageRun(membership: WorkspaceMembership | null | undefined): boolean {
-  return Boolean(membership && membership.status === "ACTIVE" && membership.wedding.status === "ACTIVE"
+  return Boolean(membership && membership.status === "ACTIVE" && ["DRAFT", "ACTIVE"].includes(membership.wedding.status)
     && membership.weddingId === membership.wedding.id
     && ["OWNER", "FULL_COORDINATOR", "DAY_OF_COORDINATOR"].includes(membership.role));
 }

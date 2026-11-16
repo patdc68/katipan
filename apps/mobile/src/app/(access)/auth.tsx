@@ -23,7 +23,7 @@ export default function Auth() {
     try {
       const result = mode === "signup" ? await signUpWithEmail(valid.data.email, valid.data.password) : await supabase.auth.signInWithPassword(valid.data);
       if (result.error) throw result.error;
-      if (result.data.session) router.replace("/(access)/create-wedding");
+      if (result.data.session) router.replace("/");
       else setSuccess("Check your email and tap the confirmation link to continue in Katipan.");
     } catch { setError("We couldn't sign you in. Check your email and password, then try again."); }
     finally { setBusy(false); }

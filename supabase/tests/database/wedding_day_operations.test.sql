@@ -11,14 +11,17 @@ insert into auth.users(id,aud,role,email,raw_app_meta_data,raw_user_meta_data,cr
 insert into public.weddings(id,origin,status,ownership_mode,created_by_user_id,display_name) values
 ('10000000-0000-0000-0000-000000009101','COUPLE_CREATED','ACTIVE','COUPLE_OWNED','00000000-0000-0000-0000-000000009101','Day A'),
 ('10000000-0000-0000-0000-000000009102','COUPLE_CREATED','ACTIVE','COUPLE_OWNED','00000000-0000-0000-0000-000000009105','Day B'),
-('10000000-0000-0000-0000-000000009103','COORDINATOR_CREATED','ACTIVE','COORDINATOR_MANAGED','00000000-0000-0000-0000-000000009106','Day Managed');
+('10000000-0000-0000-0000-000000009103','COORDINATOR_CREATED','ACTIVE','COORDINATOR_MANAGED','00000000-0000-0000-0000-000000009106','Day Managed'),
+('10000000-0000-0000-0000-000000009104','COUPLE_CREATED','DRAFT','COUPLE_OWNED','00000000-0000-0000-0000-000000009101','Day Draft');
 insert into public.wedding_memberships(wedding_id,user_id,role) values
 ('10000000-0000-0000-0000-000000009101','00000000-0000-0000-0000-000000009101','OWNER'),
 ('10000000-0000-0000-0000-000000009101','00000000-0000-0000-0000-000000009102','FULL_COORDINATOR'),
 ('10000000-0000-0000-0000-000000009101','00000000-0000-0000-0000-000000009103','DAY_OF_COORDINATOR'),
 ('10000000-0000-0000-0000-000000009101','00000000-0000-0000-0000-000000009104','GUEST_COORDINATOR'),
 ('10000000-0000-0000-0000-000000009102','00000000-0000-0000-0000-000000009105','OWNER'),
-('10000000-0000-0000-0000-000000009103','00000000-0000-0000-0000-000000009106','FULL_COORDINATOR');
+('10000000-0000-0000-0000-000000009103','00000000-0000-0000-0000-000000009106','FULL_COORDINATOR'),
+('10000000-0000-0000-0000-000000009104','00000000-0000-0000-0000-000000009101','OWNER'),
+('10000000-0000-0000-0000-000000009104','00000000-0000-0000-0000-000000009104','GUEST_COORDINATOR');
 set constraints all immediate;
 insert into public.guest_households(id,wedding_id,display_name) values
 ('20000000-0000-0000-0000-000000009101','10000000-0000-0000-0000-000000009101','Day Household'),
@@ -191,6 +194,21 @@ end $$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000009101',true);
 
+insert into public.wedding_day_items(wedding_id,title,scheduled_start,scheduled_end,sort_order)
+values ('10000000-0000-0000-0000-000000009104','Draft operational cue',now()+interval '1 hour',now()+interval '2 hours',1);
+do $$ begin
+  if not exists (select 1 from public.wedding_day_items
+      where wedding_id='10000000-0000-0000-0000-000000009104' and title='Draft operational cue')
+    or public.wedding_day_dashboard('10000000-0000-0000-0000-000000009104')->'nextItem'->>'title' <> 'Draft operational cue'
+    or exists (select 1 from public.guest_program_items where wedding_id='10000000-0000-0000-0000-000000009104') then
+    raise exception 'Draft Run of Show item was not visible on the operational dashboard or was copied to Guest Program';
+  end if;
+  begin
+    perform public.wedding_day_check_in('10000000-0000-0000-0000-000000009104');
+    raise exception 'Draft Wedding accepted check-in';
+  exception when insufficient_privilege then null; end;
+end $$;
+
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000009102',true);
 insert into public.wedding_day_items(wedding_id,title,scheduled_start)
 values ('10000000-0000-0000-0000-000000009101','Full item',now());
@@ -208,6 +226,11 @@ do $$ begin
     insert into public.wedding_day_items(wedding_id,title,scheduled_start)
       values ('10000000-0000-0000-0000-000000009101','Forbidden',now());
     raise exception 'Guest Coordinator managed Run of Show';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.wedding_day_items(wedding_id,title,scheduled_start)
+      values ('10000000-0000-0000-0000-000000009104','Draft Forbidden',now());
+    raise exception 'Guest Coordinator managed Draft Run of Show';
   exception when insufficient_privilege then null; end;
 end $$;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000009105',true);

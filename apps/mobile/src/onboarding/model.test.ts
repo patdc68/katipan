@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { allowedRoute, calendarDateToIso, emptyDraft, formatWeddingDate, InvitationGate, parseCalendarDate, SingleFlight, weddingDateForSubmit, weddingDraftSchema, weddingRpcArgs } from "./model";
+import { allowedRoute, calendarDateToIso, emptyDraft, formatWeddingDate, InvitationGate, LatestSessionRestore, parseCalendarDate, SingleFlight, weddingDateForSubmit, weddingDraftSchema, weddingRpcArgs } from "./model";
 
 describe("couple onboarding", () => {
   it("protects unauthenticated routes and redirects existing owners away from creation", () => {
@@ -48,6 +48,36 @@ describe("couple onboarding", () => {
     expect(await first).toBe("created");
     await expect(flight.run(action)).rejects.toThrow("offline");
     expect(action).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores the initial session snapshot after an auth event starts restoration", () => {
+    const gate = new LatestSessionRestore();
+    const initialSessionIsCurrent = gate.beginSessionSnapshot();
+    gate.noteAuthEvent();
+    expect(initialSessionIsCurrent()).toBe(false);
+    expect(gate.begin()()).toBe(true);
+  });
+
+  it("commits only the latest session restore when auth events overlap", async () => {
+    const gate = new LatestSessionRestore();
+    const initialSessionIsCurrent = gate.beginSessionSnapshot();
+    gate.noteAuthEvent();
+    let finishOld!: (value: string) => void;
+    let finishNew!: (value: string) => void;
+    const oldIsCurrent = gate.begin();
+    const oldRestore = new Promise<string>((resolve) => { finishOld = resolve; });
+    gate.noteAuthEvent();
+    const newIsCurrent = gate.begin();
+    const newRestore = new Promise<string>((resolve) => { finishNew = resolve; });
+    const committed: string[] = [];
+    finishNew("account-b");
+    const newResult = await newRestore;
+    if (newIsCurrent()) committed.push(newResult);
+    finishOld("account-a");
+    const oldResult = await oldRestore;
+    if (oldIsCurrent()) committed.push(oldResult);
+    expect(initialSessionIsCurrent()).toBe(false);
+    expect(committed).toEqual(["account-b"]);
   });
 
   it("Skip partner invitation completes without issuing and blocks later taps", async () => {

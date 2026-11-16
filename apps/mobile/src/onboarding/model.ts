@@ -85,6 +85,34 @@ export class SingleFlight<T> {
   }
 }
 
+/** Marks overlapping auth restoration requests so only the newest may update session state. */
+export class LatestSessionRestore {
+  private revision = 0;
+  private snapshotRevision = 0;
+  private authEventRevision = 0;
+
+  /** Captures whether a pending getSession() response may still be applied. */
+  beginSessionSnapshot(): () => boolean {
+    const snapshot = ++this.snapshotRevision;
+    const authEvent = this.authEventRevision;
+    const restoration = this.revision;
+    return () => snapshot === this.snapshotRevision
+      && authEvent === this.authEventRevision
+      && restoration === this.revision;
+  }
+
+  noteAuthEvent(): void {
+    this.authEventRevision += 1;
+    this.snapshotRevision += 1;
+  }
+
+  begin(): () => boolean {
+    const request = ++this.revision;
+    this.snapshotRevision += 1;
+    return () => request === this.revision;
+  }
+}
+
 /** Keeps Skip and invitation issuance mutually exclusive, even on rapid taps. */
 export class InvitationGate {
   private skipped = false;

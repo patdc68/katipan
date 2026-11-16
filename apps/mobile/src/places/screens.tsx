@@ -249,7 +249,7 @@ export function PlacesListScreen() {
           />)}
         </View>
       )}
-      <KatipanButton label="Back to Plan" variant="text" onPress={() => router.back()} />
+      <KatipanButton label="Back" variant="text" onPress={() => router.back()} />
     </KatipanScreen>
   );
 }

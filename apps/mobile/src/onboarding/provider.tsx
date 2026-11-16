@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, hasSupabaseConfig } from "../auth/client";
-import { emptyDraft, type CreatedWedding, type WeddingDraft } from "./model";
+import { emptyDraft, LatestSessionRestore, type CreatedWedding, type WeddingDraft } from "./model";
 
 type Stage = "start" | "details" | "created";
 type AccessContextValue = {
@@ -59,29 +59,47 @@ export function AccessProvider({ children }: { children: ReactNode }) {
   const [wedding, saveWedding] = useState<CreatedWedding | null>(null);
   const [motifDone, setMotifDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const restoration = useRef(new LatestSessionRestore());
+  const sessionUserId = useRef<string | null>(null);
+  const sessionRestorationStarted = useRef(false);
 
   const restore = useCallback(async (nextSession: Session | null) => {
+    const isCurrentRestore = restoration.current.begin();
+    sessionRestorationStarted.current = true;
+    sessionUserId.current = nextSession?.user.id ?? null;
     setSession(nextSession);
     if (!nextSession) { saveWedding(null); setStage("start"); setMotifDone(false); setDraft(emptyDraft); setError(null); setLoading(false); return; }
     setLoading(true);
     try {
       const existing = await findExistingWedding(nextSession.user.id);
+      if (!isCurrentRestore()) return;
       if (existing) { saveWedding(existing.wedding); setDraft(existing.draft); setStage("created"); setMotifDone(existing.motifDone); }
       else { saveWedding(null); setStage("start"); setMotifDone(false); }
       setError(null);
     } catch {
-      setError("We couldn't restore your wedding. Check your connection and try again.");
-    } finally { setLoading(false); }
+      if (isCurrentRestore()) setError("We couldn't restore your wedding. Check your connection and try again.");
+    } finally { if (isCurrentRestore()) setLoading(false); }
   }, []);
 
   useEffect(() => {
     if (!hasSupabaseConfig) return;
-    void supabase.auth.getSession().then(({ data }) => restore(data.session)).catch(() => { setError("We couldn't restore your session."); setLoading(false); });
+    let mounted = true;
+    const isCurrentSnapshot = restoration.current.beginSessionSnapshot();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT") void restore(nextSession);
+      if (!mounted) return;
+      restoration.current.noteAuthEvent();
+      if (event === "SIGNED_OUT" || !sessionRestorationStarted.current || sessionUserId.current !== (nextSession?.user.id ?? null)) void restore(nextSession);
       else setSession(nextSession);
     });
-    return () => subscription.unsubscribe();
+    void supabase.auth.getSession().then(({ data }) => {
+      if (mounted && isCurrentSnapshot() && !sessionRestorationStarted.current) void restore(data.session);
+    }).catch(() => {
+      if (mounted && isCurrentSnapshot() && !sessionRestorationStarted.current) {
+        setError("We couldn't restore your session.");
+        setLoading(false);
+      }
+    });
+    return () => { mounted = false; subscription.unsubscribe(); };
   }, [restore]);
 
   const value = useMemo<AccessContextValue>(() => ({
@@ -91,7 +109,13 @@ export function AccessProvider({ children }: { children: ReactNode }) {
     returnToCreate: () => setStage("start"),
     setWedding: created => { saveWedding(created); setStage("created"); setMotifDone(false); },
     finishMotif: () => setMotifDone(true),
-    refresh: async () => { setError(null); const { data } = await supabase.auth.getSession(); await restore(data.session); },
+    refresh: async () => {
+      setError(null);
+      const isCurrentSnapshot = restoration.current.beginSessionSnapshot();
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (isCurrentSnapshot()) await restore(data.session);
+    },
     signOut: async () => { const { error: signOutError } = await supabase.auth.signOut(); if (signOutError) throw signOutError; },
   }), [loading, session, draft, stage, wedding, motifDone, error, restore]);
   return <AccessContext.Provider value={value}>{children}</AccessContext.Provider>;

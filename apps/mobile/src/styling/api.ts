@@ -155,12 +155,14 @@ export async function loadWeddingStyling(membership: WorkspaceMembership): Promi
 export async function saveWeddingMotif(membership: WorkspaceMembership, draft: MotifDraft): Promise<void> {
   assertManager(membership);
   const value = motifDraftSchema.parse(draft);
-  const { data, error } = await supabase.from("wedding_motifs").upsert({
-    wedding_id: membership.weddingId,
-    title: value.title,
-    description: value.description || null,
-    notes: value.notes || null,
-  }, { onConflict: "wedding_id" }).select("id,wedding_id").maybeSingle();
+  const fields = { title: value.title, description: value.description || null, notes: value.notes || null };
+  const existing = await supabase.from("wedding_motifs").select("id,wedding_id")
+    .eq("wedding_id", membership.weddingId).maybeSingle();
+  if (existing.error) throw existing.error;
+  const result = existing.data
+    ? await supabase.from("wedding_motifs").update(fields).eq("wedding_id", membership.weddingId).select("id,wedding_id").maybeSingle()
+    : await supabase.from("wedding_motifs").insert({ wedding_id: membership.weddingId, ...fields }).select("id,wedding_id").maybeSingle();
+  const { data, error } = result;
   requireResult(data?.wedding_id === membership.weddingId ? data : null, error, "This Wedding motif is unavailable.");
 }
 
@@ -174,13 +176,15 @@ export async function deleteWeddingMotif(membership: WorkspaceMembership, motifI
 export async function saveWeddingDressCode(membership: WorkspaceMembership, draft: DressCodeDraft): Promise<void> {
   assertManager(membership);
   const value = dressCodeDraftSchema.parse(draft);
-  const { data, error } = await supabase.from("wedding_dress_codes").upsert({
-    wedding_id: membership.weddingId,
-    title: value.title,
-    description: value.description || null,
-    venue_advice: value.venueAdvice || null,
-    general_notes: value.generalNotes || null,
-  }, { onConflict: "wedding_id" }).select("id,wedding_id").maybeSingle();
+  const fields = { title: value.title, description: value.description || null,
+    venue_advice: value.venueAdvice || null, general_notes: value.generalNotes || null };
+  const existing = await supabase.from("wedding_dress_codes").select("id,wedding_id")
+    .eq("wedding_id", membership.weddingId).maybeSingle();
+  if (existing.error) throw existing.error;
+  const result = existing.data
+    ? await supabase.from("wedding_dress_codes").update(fields).eq("wedding_id", membership.weddingId).select("id,wedding_id").maybeSingle()
+    : await supabase.from("wedding_dress_codes").insert({ wedding_id: membership.weddingId, ...fields }).select("id,wedding_id").maybeSingle();
+  const { data, error } = result;
   requireResult(data?.wedding_id === membership.weddingId ? data : null, error, "This Wedding dress code is unavailable.");
 }
 

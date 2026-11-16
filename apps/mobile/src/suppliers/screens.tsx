@@ -3,6 +3,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipan/ui";
 import { formatCurrency } from "../budget/model";
+import WeddingDateField from "../onboarding/WeddingDateField";
 import {
   EditorialCard,
   EmptyState,
@@ -403,18 +404,23 @@ function SupplierCommitmentEditor({
         hint="Enter zero or more. Use the Wedding currency."
         error={fieldErrors.amount}
       />
-      <FormField
-        label="Commitment date"
-        value={draft.committedOn}
-        onChangeText={(value) => {
-          setDraft((current) => ({ ...current, committedOn: value }));
+      <View style={{ gap: s.small }}>
+        <WeddingDateField
+          label="Commitment date"
+          date={draft.committedOn}
+          disabled={saving}
+          onChange={(value) => {
+            setDraft((current) => ({ ...current, committedOn: value }));
+            setFieldErrors((current) => ({ ...current, committedOn: undefined }));
+          }}
+        />
+        <KatipanText variant="bodySmall" color="textMuted">Optional date the commitment was agreed.</KatipanText>
+        {draft.committedOn && <KatipanButton label="Clear commitment date" variant="text" disabled={saving} onPress={() => {
+          setDraft((current) => ({ ...current, committedOn: "" }));
           setFieldErrors((current) => ({ ...current, committedOn: undefined }));
-        }}
-        editable={!saving}
-        placeholder="YYYY-MM-DD"
-        hint="Optional date the commitment was agreed."
-        error={fieldErrors.committedOn}
-      />
+        }} />}
+        {!!fieldErrors.committedOn && <KatipanText variant="bodySmall" color="error">{fieldErrors.committedOn}</KatipanText>}
+      </View>
       <FormField
         label="Commitment notes"
         value={draft.notes}

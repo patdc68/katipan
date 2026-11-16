@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  canRetainLastVerifiedMembership,
   destinationAfterRestore,
   findActiveMembership,
   isCurrentWeddingWorkspace,
+  LatestWorkspaceRequest,
   nextWorkspaceCacheRevision,
   resolveRestoredSelection,
   roleLabel,
@@ -80,6 +82,22 @@ describe("workspace restoration and membership scope", () => {
   it("clears Wedding-specific cache state when switching contexts", () => {
     expect(nextWorkspaceCacheRevision(4, "w-1", "w-2")).toBe(5);
     expect(nextWorkspaceCacheRevision(4, "w-1", "w-1")).toBe(4);
+    expect(nextWorkspaceCacheRevision(4, "w-1", null)).toBe(5);
+  });
+
+  it("retains a verified Owner workspace after a transient refresh failure only for the same account", () => {
+    const owner = membership("w-owner", "OWNER");
+    expect(canRetainLastVerifiedMembership("user-1", "user-1", [owner])).toBe(true);
+    expect(canRetainLastVerifiedMembership("user-2", "user-1", [owner])).toBe(false);
+    expect(canRetainLastVerifiedMembership("user-1", "user-1", [])).toBe(false);
+  });
+
+  it("lets only the newest workspace membership request commit", () => {
+    const requests = new LatestWorkspaceRequest();
+    const oldRequestIsCurrent = requests.begin();
+    const newRequestIsCurrent = requests.begin();
+    expect(newRequestIsCurrent()).toBe(true);
+    expect(oldRequestIsCurrent()).toBe(false);
   });
 });
 

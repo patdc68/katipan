@@ -119,6 +119,7 @@ export default function EntourageScreen() {
 
   return (
     <KatipanScreen contentContainerStyle={styles.page}>
+      <KatipanButton label="Back to Guests Home" variant="text" onPress={() => router.replace({ pathname: "/(wedding)/[weddingId]/guests", params: { weddingId } })} />
       <GuestSectionNavigation active="ENTOURAGE" onGuestsPress={openGuestList} />
 
       <View style={styles.titleBlock}>

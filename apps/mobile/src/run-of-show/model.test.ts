@@ -3,10 +3,10 @@ import type { WorkspaceMembership } from "../workspace/model";
 import { canManageRun, canReviewGuestProgram, orderedRunItems, runDraftSchema, SubmitGate, type RunItem } from "./model";
 
 const weddingId = "10000000-0000-4000-8000-000000000001";
-function membership(role: WorkspaceMembership["role"]): WorkspaceMembership {
+function membership(role: WorkspaceMembership["role"], weddingStatus: WorkspaceMembership["wedding"]["status"] = "ACTIVE"): WorkspaceMembership {
   return { membershipId: "20000000-0000-4000-8000-000000000001", userId: "30000000-0000-4000-8000-000000000001",
     weddingId, role, status: "ACTIVE", partnerNames: ["Juan", "Maria"], wedding: { id: weddingId,
-      display_name: "Juan & Maria", wedding_date: null, general_location: null, status: "ACTIVE",
+      display_name: "Juan & Maria", wedding_date: null, general_location: null, status: weddingStatus,
       origin: "COUPLE_CREATED", ownership_mode: "COUPLE_OWNED" } };
 }
 const draft = { title: "Ceremony", description: "", scheduledStart: "2027-01-01T15:00:00+08:00",
@@ -18,6 +18,13 @@ describe("Run of Show domain", () => {
     for (const role of ["OWNER", "FULL_COORDINATOR"] as const) expect(canReviewGuestProgram(membership(role))).toBe(true);
     expect(canReviewGuestProgram(membership("DAY_OF_COORDINATOR"))).toBe(false);
     expect(canReviewGuestProgram(membership("GUEST_COORDINATOR"))).toBe(false);
+  });
+  it("lets operational managers prepare a Run of Show on a draft Wedding", () => {
+    expect(canManageRun(membership("OWNER", "DRAFT"))).toBe(true);
+    expect(canManageRun(membership("FULL_COORDINATOR", "DRAFT"))).toBe(true);
+    expect(canManageRun(membership("DAY_OF_COORDINATOR", "DRAFT"))).toBe(true);
+    expect(canManageRun(membership("GUEST_COORDINATOR", "DRAFT"))).toBe(false);
+    expect(canManageRun(membership("OWNER", "COMPLETED"))).toBe(false);
   });
   it("validates title, timestamps, order, and actual timing", () => {
     expect(runDraftSchema.safeParse(draft).success).toBe(true);

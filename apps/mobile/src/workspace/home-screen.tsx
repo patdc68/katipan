@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipan/ui";
 import {
   EditorialCard, EmptyState, ErrorState, KatipanButton, KatipanScreen,
@@ -16,6 +16,14 @@ export default function HomeScreen() {
   const params = useLocalSearchParams<{ weddingId?: string | string[] }>();
   const weddingId = Array.isArray(params.weddingId) ? params.weddingId[0] ?? "" : params.weddingId ?? "";
   const router = useRouter();
+  useFocusEffect(useCallback(() => {
+    if (Platform.OS !== "android") return undefined;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      BackHandler.exitApp();
+      return true;
+    });
+    return () => subscription.remove();
+  }, []));
   const workspace = useWorkspace();
   const membership = weddingId ? workspace.membershipFor(weddingId) : null;
   const isCurrentWorkspace = isCurrentWeddingWorkspace(membership, workspace.selectedWeddingId, weddingId);

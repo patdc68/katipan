@@ -45,10 +45,10 @@ export default function RunOfShowScreen() {
       <View style={styles.summaryStat}><KatipanText variant="labelCaps" color="textMuted">CURRENT STATUS</KatipanText><KatipanText variant="title" color="primary">{current ? current.title : next ? "Next: " + next.title : "No active item"}</KatipanText></View>
       <View style={styles.summaryStat}><KatipanText variant="labelCaps" color="textMuted">NEEDS ATTENTION</KatipanText><KatipanText variant="title" color="secondary">{data.items.filter(item => item.status === "DELAYED").length} delayed</KatipanText></View>
     </EditorialCard>}
-    <SectionHeader title="Timeline" description="Scheduled order · actual timing appears when recorded" action={canEdit ? <KatipanButton label="Add Item" variant="secondary" onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/plan/run-of-show/new", params: { weddingId } } as unknown as Href)} /> : undefined} />
+    <SectionHeader title="Timeline" description="Scheduled order · actual timing appears when recorded" action={canEdit ? <KatipanButton label="Add Operational Item" variant="secondary" onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/plan/run-of-show/new", params: { weddingId } } as unknown as Href)} /> : undefined} />
     {shown.length === 0 ? <EditorialCard><EmptyState title={data.items.length ? "No items in this filter" : "No Run of Show items yet"}
-      description={data.items.length ? "Choose another status to see the timeline." : "Add the first operational cue for this Wedding."}
-      action={canEdit && !data.items.length ? <KatipanButton label="Add Item" onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/plan/run-of-show/new", params: { weddingId } } as unknown as Href)} /> : undefined} /></EditorialCard>
+      description={data.items.length ? "Choose another status to see the timeline." : "Create a team operational cue here. Guest Program entries remain separate."}
+      action={canEdit && !data.items.length ? <KatipanButton label="Add Operational Item" onPress={() => router.push({ pathname: "/(wedding)/[weddingId]/plan/run-of-show/new", params: { weddingId } } as unknown as Href)} /> : undefined} /></EditorialCard>
       : shown.map(item => <TimelineItem key={item.id} item={item} data={data} onOpen={() => openItem(item.id)}
         onProgram={(programId) => router.push({ pathname: "/(wedding)/[weddingId]/website/program/[itemId]", params: { weddingId, itemId: programId } } as unknown as Href)} />)}
   </KatipanScreen>;

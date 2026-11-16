@@ -110,6 +110,7 @@ export function SeatingOverviewScreen() {
 
   return (
     <KatipanScreen contentContainerStyle={styles.page}>
+      <KatipanButton label="Back" variant="text" onPress={() => router.back()} />
       <View style={styles.kicker}><KatipanText variant="labelCaps" color="secondary">KATIPAN · GUESTS</KatipanText><StatusChip label={membership.role.replaceAll("_", " ")} tone="neutral" /></View>
       <View style={styles.titleBlock}>
         <KatipanText variant="headlineLarge" accessibilityRole="header">Seating Overview</KatipanText>
@@ -240,7 +241,7 @@ export function SeatingTableDetailsScreen() {
 
   return (
     <KatipanScreen contentContainerStyle={styles.page}>
-      <KatipanButton label="‹ Seating Overview" variant="text" onPress={() => seatingRoute(router, weddingId)} />
+      <KatipanButton label="Back to Seating Overview" variant="text" onPress={() => seatingRoute(router, weddingId)} />
       <View style={styles.titleBlock}><KatipanText variant="labelCaps" color="secondary">TABLE DETAILS</KatipanText><KatipanText variant="headlineLarge" accessibilityRole="header">{table.table_number ? `Table ${table.table_number}: ` : ""}{table.name}</KatipanText></View>
       <EditorialCard style={styles.eventCard}>
         <View style={styles.rowBetween}><StatusChip label={shapeLabel(table.shape)} tone="neutral" /><StatusChip label={`${summary.occupancy} / ${table.capacity} seated`} tone={summary.occupancy >= table.capacity ? "warning" : "success"} /></View>
@@ -300,7 +301,7 @@ export function AssignGuestsScreen() {
   if (error || !data) return <KatipanScreen><ErrorState description="We couldn't load assignable Guests." onRetry={retry} /></KatipanScreen>;
   const canEdit = canManageSeating(membership);
   const event = data.events.find((item) => item.wedding_id === weddingId && item.event_kind === "RECEPTION");
-  if (!event) return <KatipanScreen contentContainerStyle={styles.page}><KatipanButton label="‹ Seating Overview" variant="text" onPress={() => seatingRoute(router, weddingId)} /><EditorialCard style={styles.emptyCard}><EmptyState title="No Reception Seating Event" description="Create Reception seating from the overview before assigning Guests." action={<KatipanButton label="Open Seating Overview" onPress={() => seatingRoute(router, weddingId)} />} /></EditorialCard></KatipanScreen>;
+  if (!event) return <KatipanScreen contentContainerStyle={styles.page}><KatipanButton label="Back to Seating Overview" variant="text" onPress={() => seatingRoute(router, weddingId)} /><EditorialCard style={styles.emptyCard}><EmptyState title="No Reception Seating Event" description="Create Reception seating from the overview before assigning Guests." action={<KatipanButton label="Open Seating Overview" onPress={() => seatingRoute(router, weddingId)} />} /></EditorialCard></KatipanScreen>;
   const overview = buildSeatingOverview(data, event);
   const entries = buildSeatingGuestEntries(data, event.id);
   const tables = overview?.tables ?? [];
@@ -340,7 +341,7 @@ export function AssignGuestsScreen() {
 
   return (
     <KatipanScreen contentContainerStyle={styles.page}>
-      <KatipanButton label="‹ Seating Overview" variant="text" onPress={() => seatingRoute(router, weddingId)} />
+      <KatipanButton label="Back to Seating Overview" variant="text" onPress={() => seatingRoute(router, weddingId)} />
       <View style={styles.titleBlock}><KatipanText variant="labelCaps" color="secondary">RECEPTION SEATING</KatipanText><KatipanText variant="headlineLarge" accessibilityRole="header">Assign Guests</KatipanText><KatipanText color="textMuted">Choose a Table and seat each Attending Guest individually.</KatipanText></View>
       <EditorialCard style={styles.eventCard}>
         <SectionHeader title="Choose a Table" description="Moving a Guest updates their existing Reception assignment." />

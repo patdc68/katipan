@@ -74,8 +74,26 @@ export function isCurrentWeddingWorkspace(
   );
 }
 
-export function nextWorkspaceCacheRevision(current: number, previousWeddingId: string | null, nextWeddingId: string): number {
+export function nextWorkspaceCacheRevision(current: number, previousWeddingId: string | null, nextWeddingId: string | null): number {
   return previousWeddingId === nextWeddingId ? current : current + 1;
+}
+
+export function canRetainLastVerifiedMembership(
+  sessionUserId: string | null,
+  cachedUserId: string | null,
+  memberships: readonly WorkspaceMembership[],
+): boolean {
+  return Boolean(sessionUserId && sessionUserId === cachedUserId && activeMemberships(memberships).length > 0);
+}
+
+/** Invalidates pending membership reads when a newer restore or refresh starts. */
+export class LatestWorkspaceRequest {
+  private revision = 0;
+
+  begin(): () => boolean {
+    const request = ++this.revision;
+    return () => request === this.revision;
+  }
 }
 
 export function roleLabel(role: WorkspaceRole): string {

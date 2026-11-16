@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { Redirect, Tabs, useLocalSearchParams } from "expo-router";
-import { Text } from "react-native";
 import { colorTokens as c, fontTokens } from "@katipan/ui";
 import { useAccess } from "../../../onboarding/provider";
 import { useWorkspace } from "../../../workspace/context";
 import { destinationAfterRestore, isCurrentWeddingWorkspace } from "../../../workspace/model";
 import { ErrorState, KatipanScreen, LoadingState } from "../../../ui";
+import { WorkspaceTabIcon } from "../../../ui/WorkspaceTabIcon";
 
 export default function WeddingTabsLayout() {
   const params = useLocalSearchParams<{ weddingId?: string | string[] }>();
@@ -51,16 +51,16 @@ export default function WeddingTabsLayout() {
         },
       }}
     >
-      <Tabs.Screen name="home" options={{ title: "Home", tabBarAccessibilityLabel: "Home tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 5 }}>♡</Text> }} />
-      <Tabs.Screen name="plan" options={{ title: "Plan", tabBarAccessibilityLabel: "Plan tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>☷</Text> }} />
-      <Tabs.Screen name="guests" options={{ title: "Guests", tabBarAccessibilityLabel: "Guests tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>♧</Text> }} />
+      <Tabs.Screen name="home" options={{ title: "Home", tabBarAccessibilityLabel: "Home tab", tabBarIcon: ({ color, size }) => <WorkspaceTabIcon name="home" color={color} size={size} /> }} />
+      <Tabs.Screen name="plan" options={{ title: "Plan", tabBarAccessibilityLabel: "Plan tab", tabBarIcon: ({ color, size }) => <WorkspaceTabIcon name="plan" color={color} size={size} /> }} />
+      <Tabs.Screen name="guests" options={{ title: "Guests", tabBarAccessibilityLabel: "Guests tab", tabBarIcon: ({ color, size }) => <WorkspaceTabIcon name="guests" color={color} size={size} /> }} />
       <Tabs.Screen name="places" options={{ href: null, title: "Wedding Places" }} />
       <Tabs.Screen name="seating" options={{ href: null, title: "Seating" }} />
       <Tabs.Screen name="day" options={{ href: null, title: "Wedding Day" }} />
       <Tabs.Screen name="website" options={{ href: null, title: "Wedding Website" }} />
       <Tabs.Screen name="style" options={{ href: null, title: "Wedding Styling" }} />
-      <Tabs.Screen name="budget" options={{ title: "Budget", tabBarAccessibilityLabel: "Budget tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>¤</Text> }} />
-      <Tabs.Screen name="more" options={{ title: "More", tabBarAccessibilityLabel: "More tab", tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size + 3 }}>•••</Text> }} />
+      <Tabs.Screen name="budget" options={{ title: "Budget", tabBarAccessibilityLabel: "Budget tab", tabBarIcon: ({ color, size }) => <WorkspaceTabIcon name="budget" color={color} size={size} /> }} />
+      <Tabs.Screen name="more" options={{ title: "More", tabBarAccessibilityLabel: "More tab", tabBarIcon: ({ color, size }) => <WorkspaceTabIcon name="more" color={color} size={size} /> }} />
       <Tabs.Screen name="team" options={{ href: null, title: "Wedding Team" }} />
     </Tabs>
   );
