@@ -1,14 +1,36 @@
 import { useRouter, type Href } from "expo-router";
+import { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { colorTokens as c, radiusTokens as r, spacingTokens as s } from "@katipan/ui";
 import { KatipanScreen, KatipanText, KatipanButton } from "../../ui";
 import { artwork, EditorialImage, InfoRow, OnboardingHeader } from "../../onboarding/components";
 import { useAccess } from "../../onboarding/provider";
+import { useWorkspace } from "../../workspace/context";
+import { authenticatedRootRoute } from "../../workspace/model";
 
 export default function CreateWedding() {
   const router = useRouter(); const { beginDetails, signOut } = useAccess();
+  const workspace = useWorkspace();
+  const [signingOut, setSigningOut] = useState(false);
+  const [error, setError] = useState("");
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    setError("");
+    try {
+      await workspace.clearForLogout();
+      await signOut();
+      router.replace(authenticatedRootRoute);
+    } catch {
+      try { await workspace.refreshMemberships(); } catch { /* The workspace error state provides a retry. */ }
+      setError("We couldn't sign out. Check your connection and try again.");
+      setSigningOut(false);
+    }
+  }
   return <KatipanScreen contentContainerStyle={styles.content}>
-    <OnboardingHeader backLabel="Sign out" onBack={() => void signOut()} />
+    <OnboardingHeader backLabel="Sign out" onBack={() => void handleSignOut()} />
+    {signingOut ? <KatipanText color="textMuted" accessibilityRole="alert">Signing out…</KatipanText> : null}
+    {error ? <KatipanText color="error" accessibilityRole="alert">{error}</KatipanText> : null}
     <View style={styles.intro}><KatipanText variant="labelCaps" color="secondary">WELCOME TO KATIPAN</KatipanText><KatipanText variant="headlineMobile" accessibilityRole="header">Let’s create your wedding.</KatipanText><KatipanText color="textMuted" style={styles.center}>A few details will help Katipan personalize your planning experience, estimate your timeline, and tailor curated recommendations.</KatipanText></View>
     <EditorialImage source={artwork.create} height={220} caption="KEEPSAKE EDITION  ·  Araw ng Kasal" />
     <View style={styles.card}><KatipanText variant="title">What we’ll personalize</KatipanText><InfoRow title="Your Shared Planning Workspace" description="One collaborative space for you and your partner with live synced guest lists and budgets." /><InfoRow icon="◷" title="Personalized Milestone Roadmap" description="Built around your estimated date and celebration style." /><InfoRow icon="☷" title="A Plan Built Around Your Wedding" description="Checklist, budget, guests, places, and wedding details in one space." /></View>

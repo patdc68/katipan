@@ -7,7 +7,7 @@ vi.mock("../auth/client", () => ({ supabase: { rpc } }));
 describe("partner invitation acceptance boundary", () => {
   beforeEach(() => rpc.mockReset());
 
-  it("accepts the existing Wedding and person through the existing RPC only", async () => {
+  it("14. partner acceptance preserves the existing Wedding/person identity through the existing RPC", async () => {
     const token = "a".repeat(64);
     rpc.mockResolvedValue({ data: [{
       invitation_id: "invite-1",

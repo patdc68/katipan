@@ -8,7 +8,7 @@ import { supabase } from "../auth/client";
 import { signUpWithEmail } from "../auth/email";
 import { acceptInvitation } from "../workspace/api";
 import { useWorkspace } from "../workspace/context";
-import { safeInvitationFailure } from "../workspace/model";
+import { authenticatedRootRoute, safeInvitationFailure } from "../workspace/model";
 
 const credentials = z.object({ email: z.email(), password: z.string().min(8) });
 
@@ -68,6 +68,11 @@ export default function AcceptInvitation() {
 
   return (
     <KatipanScreen contentContainerStyle={{ gap: 20 }}>
+      <KatipanButton label="Back" variant="text" onPress={() => {
+        if (session) router.replace(authenticatedRootRoute);
+        else if (router.canGoBack()) router.back();
+        else router.replace("/(access)/welcome");
+      }} />
       <Brand />
       <EditorialImage source={artwork.invite} height={210} />
       <KatipanText variant="headlineMobile" accessibilityRole="header">Join the Wedding on Katipan.</KatipanText>

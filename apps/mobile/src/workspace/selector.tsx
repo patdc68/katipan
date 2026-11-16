@@ -7,8 +7,8 @@ import {
   KatipanScreen, KatipanText, LoadingState, StatusChip,
 } from "../ui";
 import { Brand, ChoiceChip } from "../onboarding/components";
-import { useWorkspace } from "./context";
-import { ownershipModeLabel, roleLabel, weddingStatusLabel, type WorkspaceMembership } from "./model";
+import { useWorkspace, WorkspaceMembershipLostError } from "./context";
+import { noWeddingRoutes, ownershipModeLabel, roleLabel, weddingStatusLabel, type WorkspaceMembership } from "./model";
 import { formatWeddingDate, localCalendarDate, weddingDisplayName } from "./presentation";
 
 type Filter = "ALL" | "UPCOMING" | "PAST";
@@ -105,13 +105,15 @@ export function WeddingsSelector() {
         ? "/(coordinator)/[weddingId]/overview"
         : "/(wedding)/[weddingId]/home";
       router.replace({ pathname: route, params: { weddingId } } as unknown as Href);
-    } catch {
-      setLocalError("This Wedding workspace is no longer available. Refresh your memberships and try again.");
+    } catch (error) {
+      setLocalError(error instanceof WorkspaceMembershipLostError
+        ? "Your access to that Wedding has changed. Choose another Wedding or refresh your workspaces."
+        : "We couldn't verify your Wedding memberships. Check your connection and try again.");
       setOpeningId(null);
     }
   }
 
-  if (workspace.loading) return <KatipanScreen><LoadingState label="Loading your Weddings…" /></KatipanScreen>;
+  if (workspace.status === "AUTH_LOADING" || workspace.status === "AUTHENTICATED_WORKSPACE_LOADING") return <KatipanScreen><LoadingState label="Loading your Weddings…" /></KatipanScreen>;
   if (workspace.error) return <KatipanScreen><ErrorState description={workspace.error} onRetry={() => void workspace.refreshMemberships()} /></KatipanScreen>;
 
   const upcomingCount = workspace.memberships.filter((membership) => isUpcoming(membership, today)).length;
@@ -119,19 +121,29 @@ export function WeddingsSelector() {
 
   return (
     <KatipanScreen contentContainerStyle={styles.screen}>
-      <View style={styles.topline}><Brand /><KatipanText variant="labelCaps" color="secondary">YOUR WORKSPACES</KatipanText></View>
+      <View style={styles.topline}>
+        <Brand />
+        <KatipanText variant="labelCaps" color="secondary">YOUR WORKSPACES</KatipanText>
+        {router.canGoBack() ? <KatipanButton label="Back" variant="text" onPress={() => router.back()} /> : null}
+      </View>
       <View style={styles.intro}>
         <KatipanText variant="headlineMobile" accessibilityRole="header">My Weddings</KatipanText>
         <KatipanText color="textMuted">Choose a Wedding workspace to continue.</KatipanText>
       </View>
 
-      <KatipanButton label="Create a Client Wedding" variant="secondary" onPress={() => router.push("/(coordinator)/onboarding" as unknown as Href)} />
+      <KatipanButton label="Create a Client Wedding" variant="secondary" onPress={() => router.push(noWeddingRoutes.coordinatorCreation as unknown as Href)} />
+
+      {workspace.membershipLost ? <KatipanText color="error" accessibilityRole="alert">
+        Access to a previously selected Wedding has changed. Choose an active Wedding to continue.
+      </KatipanText> : null}
 
       {workspace.memberships.length === 0 ? (
         <EmptyState
-          title="No active Wedding memberships"
-          description="Create a Wedding of your own, start a client Wedding, or reopen an invitation you have received."
-          action={<KatipanButton label="Create our Wedding" onPress={() => router.replace("/(access)/create-wedding")} />}
+          title={workspace.status === "AUTHENTICATED_MEMBERSHIP_LOST" ? "Wedding access changed" : "No active Wedding memberships"}
+          description={workspace.status === "AUTHENTICATED_MEMBERSHIP_LOST"
+            ? "You no longer have an active membership in your previous Wedding. You can create a Wedding or accept a new invitation."
+            : "Create a Wedding of your own, start a client Wedding, or reopen an invitation you have received."}
+          action={<KatipanButton label="Create our Wedding" onPress={() => router.replace(noWeddingRoutes.coupleCreation as unknown as Href)} />}
         />
       ) : <>
         <View style={styles.metrics}>
@@ -188,7 +200,7 @@ function Metric({ value, label }: { value: string; label: string }) {
 
 const styles = StyleSheet.create({
   screen: { gap: s.large, paddingBottom: s.extraLarge },
-  topline: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  topline: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: s.small },
   intro: { gap: s.small, paddingTop: s.small },
   metrics: { flexDirection: "row", gap: s.small },
   metric: { flex: 1, minHeight: 88, alignItems: "center", justifyContent: "center", gap: s.small, backgroundColor: c.surfaceLow, borderRadius: r.large, padding: s.small },

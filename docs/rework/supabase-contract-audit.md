@@ -63,6 +63,47 @@ Live security advisors returned five INFO [RLS-enabled private tables without po
 
 These are open audit dispositions, not proof of exploit or permission to bulk revoke/drop. Private no-policy tables appear intentionally restricted behind functions; verify grants and narrow callers individually. For each security-definer function verify auth/capability, fixed search_path, object/Wedding binding and execute grants. Agent 02/03 must resolve Auth protection configuration before release. Unused indexes in lightly exercised DEV do not justify deletion. No advisors were changed. R1 must audit relevant core warnings; each later slice covers its functions; R8 requires recorded disposition for all warnings.
 
+## R1 Core Workspace audit — Agent 02 (read-only, 2026-11-16)
+
+Project-scoped Supabase MCP confirmed application URL `https://fslwqgfuzzgsshkotfpn.supabase.co` (project `fslwqgfuzzgsshkotfpn`). The audit queried catalog metadata, function definitions/grants, policies, migration inventory, advisors, and deployed deletion Edge code. No application rows, account emails, invitation tokens, or token digests were selected; no SQL/DEV mutation or write probe was run.
+
+Repository migrations and DEV inventory match exactly: 22 versions/names, latest `20260928124347_guest_program_google_place_id`. Inspected core table columns/enums and generated public types align, including Wedding lifecycle/ownership fields, nullable membership `user_id` and roles/statuses, partner linkage, person contact fields, invitation metadata, and RPC inputs/returns. `private.wedding_invitation_secrets` remains outside public generated types. No R1 migration or type regeneration is required.
+
+### Core Workspace decision matrix
+
+| Contract | KEEP | CHANGE | ADD | DEPRECATE | REMOVE | Evidence / rationale |
+| --- | :---: | :---: | :---: | :---: | :---: | --- |
+| Auth principal and optional profile linkage | X | | | | | `profiles.id` references `auth.users.id`; RLS limits writes to the caller. Profile is optional presentation data, not session or authorization authority. |
+| Wedding identity, origin, lifecycle, and ownership mode | X | | | | | Live enums and constraints match migrations/types. Wedding lifecycle states are distinct from membership status. |
+| Membership identity, role, and status | X | | | | | Unique `(wedding_id,user_id)` membership; roles remain OWNER/FULL_COORDINATOR/DAY_OF_COORDINATOR/GUEST_COORDINATOR. Direct client access is read-only and RLS-scoped. |
+| Partner/person account linkage | X | | | | | Same-Wedding FK and unique linked-user index prevent duplicate account linkage within one Wedding. Acceptance links an existing Person. |
+| Partner and Coordinator invitations | X | | | | | Random opaque tokens are returned at issuance; only SHA-256 digests are stored privately. Acceptance locks and validates relevant Wedding/person/invitation rows. |
+| Core RLS and authenticated RPC grants | X | | | | | Core rows are not directly writable by authenticated clients. SECURITY DEFINER RPCs are granted to `authenticated`, denied to `anon`, and enforce caller/role/token/lifecycle checks. |
+| Account deletion preparation | X | | | | | Preparation protects final Owner/controller, marks memberships LEFT, detaches the account from the existing Person without deleting it, then supports Auth soft deletion. |
+| Workspace restore reads | X | | | | | Existing membership/Wedding/Partner read contract supports authoritative client restore and membership revalidation; no backend contract change is needed. |
+
+No CHANGE, ADD, DEPRECATE, or REMOVE decision is required for R1 backend contracts. Existing R0 CHANGE rows for other domains are separate and do not authorize R1 changes.
+
+### Verified lifecycle and invitation behavior
+
+- `private.has_active_wedding_membership(uuid)` checks `auth.uid()`, the same `wedding_id`, and `membership.status = 'ACTIVE'`; it does **not** filter on `weddings.status`. The Wedding, Person, Partner, and Membership SELECT policies use this helper. A valid OWNER membership on a DRAFT Wedding is visible and remains membership. A feature lifecycle restriction must not be converted into a no-membership/unavailable result.
+- The deferrable active-Owner invariant applies to an `ACTIVE`, `COUPLE_OWNED` Wedding. Coordinator-managed controller invariants are separate. Changing Wedding status does not change `wedding_memberships.status`.
+- `create_couple_wedding` atomically creates a DRAFT/COUPLE_OWNED Wedding, links the signed-in Auth user to partner 1, and creates an ACTIVE OWNER membership. `create_coordinator_managed_wedding` atomically creates a DRAFT/COORDINATOR_MANAGED Wedding, the creator's ACTIVE FULL_COORDINATOR membership, and two existing but unlinked partner people.
+- `issue_partner_owner_invitation` requires Owner or active creating-Full-Coordinator authority and targets an existing same-Wedding Partner. The invitation lifecycle trigger allows DRAFT/ACTIVE and rejects archived or deletion-pending Weddings. `accept_wedding_invitation` locks the Wedding, invitation, secret, Person, and Partner; requires an authenticated caller; checks digest/expiry and confirmed email when bound; rejects a different linked account or a second Person for the same account; links the existing Person; creates/reactivates the person's OWNER membership; and changes coordinator-managed ownership to couple-owned on first client join. The coordinator remains FULL_COORDINATOR. The other partner accepts separately. The lifecycle trigger also prevents acceptance after archive/deletion is requested.
+- Coordinator invitation acceptance allows DRAFT/ACTIVE only, rejects deletion-pending Weddings, permits only coordinator roles, and rejects an account linked to a Partner so the Owner workflow remains canonical.
+- Core SELECT policies are `authenticated` only. Wedding updates are limited to specified mutable columns and Owner/Full Coordinator roles. Person/Partner/Membership direct writes are closed. Invitation SELECT is manager-scoped. `private.wedding_invitation_secrets` has RLS enabled without public client policies/grants; digest access stays in narrowly granted RPCs.
+- Live `delete-account` Edge Function is ACTIVE with `verify_jwt=true`. Its deployed shared lifecycle handler validates the caller with Auth, invokes `prepare_self_account_deletion`, then soft-deletes the Auth user through its server-side service credential. Client session/workspace cache invalidation remains Agent 03 behavior.
+
+Existing database regressions include `supabase/tests/database/core_weddings_people_memberships.test.sql`, `supabase/tests/database/ownership_client_invitation_workflows.test.sql`, and `supabase/tests/database/wedding_lifecycle_settings.test.sql`. They cover role/RLS visibility, DRAFT lifecycle, first-client ownership transition, independent second-partner acceptance, and person-identity preservation. These suites were inspected, not run against DEV; write probes were not authorized during this audit.
+
+### Live advisor findings relevant to R1
+
+Live security advisors returned five INFO `rls_enabled_no_policy` findings for private tables, including `private.wedding_invitation_secrets`; this is consistent with private digest storage behind RPCs. They also returned 53 WARN `authenticated_security_definer_function_executable` findings; core examples include create/issue/accept invitation and membership/lifecycle RPCs. The inspected core routines use `SET search_path = ''`; are granted to `authenticated`, not `anon`; and derive the caller from `auth.uid()` with membership, role, token, or lifecycle checks. Do not mass-revoke these intentionally callable routines; review each warning and actual caller individually.
+
+Auth advisors report leaked-password protection disabled (one WARN). This is an Auth project setting, not a schema/type gap, and remains an open security-setting disposition before release. Performance advisors report 91 INFO unused indexes, including core Wedding/membership indexes; DEV workload is not evidence to drop them. Health advisors returned no lints. No advisor remediation or remote setting change was made during this read-only audit.
+
+**Agent 02 handoff:** R1 can proceed to Agent 01 and then Agent 03 without a backend migration. Preserve current contracts. Use `wedding_memberships.status = ACTIVE` as membership authority independently of Wedding lifecycle; treat query failure as recoverable/error and an authoritative no-membership result as membership loss. Any later schema/RPC change returns to Agent 00 as a separately authorized proposal.
+
 ## Forward-only migration strategy (future authorization required)
 
 Keep website templates/columns and old clients working. First inventory actual consumers and define additive Canva metadata/secret boundaries. Propose server-only connection storage and Wedding-scoped design references with constraints, indexes, RLS/grants in the same change, then typed server contracts and compatibility tests. Do not add a second RSVP/Guest/attendance store. If native artwork-only fields are later found, stop new writes only after replacement acceptance; retain reads/data during a measured compatibility period. Drops require separate approval and proven recovery; none is proposed now.

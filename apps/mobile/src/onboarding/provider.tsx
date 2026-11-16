@@ -1,11 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, hasSupabaseConfig } from "../auth/client";
+import { AuthEventGeneration, RequestGeneration } from "../auth/session";
 import { emptyDraft, type CreatedWedding, type WeddingDraft } from "./model";
 
 type Stage = "start" | "details" | "created";
 type AccessContextValue = {
-  loading: boolean; session: Session | null; draft: WeddingDraft; stage: Stage;
+  loading: boolean; session: Session | null; sessionRevision: number; draft: WeddingDraft; stage: Stage;
   wedding: CreatedWedding | null; motifDone: boolean; error: string | null;
   updateDraft: (patch: Partial<WeddingDraft>) => void; beginDetails: () => void; returnToCreate: () => void;
   setWedding: (wedding: CreatedWedding) => void; finishMotif: () => void;
@@ -54,46 +55,114 @@ export async function findExistingWedding(userId: string): Promise<{ wedding: Cr
 export function AccessProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(hasSupabaseConfig);
   const [session, setSession] = useState<Session | null>(null);
+  const [sessionRevision, setSessionRevision] = useState(0);
   const [draft, setDraft] = useState<WeddingDraft>(emptyDraft);
   const [stage, setStage] = useState<Stage>("start");
   const [wedding, saveWedding] = useState<CreatedWedding | null>(null);
   const [motifDone, setMotifDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sessionRef = useRef<Session | null>(null);
+  const sessionRevisionRef = useRef(0);
+  const requestGeneration = useRef(new RequestGeneration());
+  const authEventGeneration = useRef(new AuthEventGeneration());
 
-  const restore = useCallback(async (nextSession: Session | null) => {
+  const applySession = useCallback((nextSession: Session | null) => {
+    const previousUserId = sessionRef.current?.user.id ?? null;
+    const nextUserId = nextSession?.user.id ?? null;
+    if (previousUserId !== nextUserId) {
+      sessionRevisionRef.current += 1;
+      setSessionRevision(sessionRevisionRef.current);
+      setDraft(emptyDraft);
+      saveWedding(null);
+      setStage("start");
+      setMotifDone(false);
+    }
+    sessionRef.current = nextSession;
     setSession(nextSession);
-    if (!nextSession) { saveWedding(null); setStage("start"); setMotifDone(false); setDraft(emptyDraft); setError(null); setLoading(false); return; }
-    setLoading(true);
-    try {
-      const existing = await findExistingWedding(nextSession.user.id);
-      if (existing) { saveWedding(existing.wedding); setDraft(existing.draft); setStage("created"); setMotifDone(existing.motifDone); }
-      else { saveWedding(null); setStage("start"); setMotifDone(false); }
-      setError(null);
-    } catch {
-      setError("We couldn't restore your wedding. Check your connection and try again.");
-    } finally { setLoading(false); }
+    setError(null);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     if (!hasSupabaseConfig) return;
-    void supabase.auth.getSession().then(({ data }) => restore(data.session)).catch(() => { setError("We couldn't restore your session."); setLoading(false); });
+    let mounted = true;
+    const snapshot = authEventGeneration.current.snapshot();
+    const request = requestGeneration.current.begin();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT") void restore(nextSession);
-      else setSession(nextSession);
+      if (!mounted) return;
+      authEventGeneration.current.noteEvent();
+      const currentUserId = sessionRef.current?.user.id ?? null;
+      const nextUserId = nextSession?.user.id ?? null;
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "SIGNED_OUT" || currentUserId !== nextUserId) {
+        requestGeneration.current.begin();
+        applySession(nextSession);
+      } else {
+        sessionRef.current = nextSession;
+        setSession(nextSession);
+      }
     });
-    return () => subscription.unsubscribe();
-  }, [restore]);
+    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
+      if (!mounted || !requestGeneration.current.isCurrent(request) || !authEventGeneration.current.isCurrent(snapshot)) return;
+      if (sessionError) throw sessionError;
+      applySession(data.session);
+    }).catch(() => {
+      if (!mounted || !requestGeneration.current.isCurrent(request) || !authEventGeneration.current.isCurrent(snapshot)) return;
+      setError("We couldn't restore your session. Check your connection and try again.");
+      setLoading(false);
+    });
+    return () => {
+      mounted = false;
+      requestGeneration.current.invalidate();
+      subscription.unsubscribe();
+    };
+  }, [applySession]);
 
   const value = useMemo<AccessContextValue>(() => ({
-    loading, session, draft, stage, wedding, motifDone, error,
+    loading, session, sessionRevision, draft, stage, wedding, motifDone, error,
     updateDraft: patch => setDraft(current => ({ ...current, ...patch })),
     beginDetails: () => setStage("details"),
     returnToCreate: () => setStage("start"),
     setWedding: created => { saveWedding(created); setStage("created"); setMotifDone(false); },
     finishMotif: () => setMotifDone(true),
-    refresh: async () => { setError(null); const { data } = await supabase.auth.getSession(); await restore(data.session); },
-    signOut: async () => { const { error: signOutError } = await supabase.auth.signOut(); if (signOutError) throw signOutError; },
-  }), [loading, session, draft, stage, wedding, motifDone, error, restore]);
+    refresh: async () => {
+      const request = requestGeneration.current.begin();
+      const snapshot = authEventGeneration.current.snapshot();
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (requestGeneration.current.isCurrent(request) && authEventGeneration.current.isCurrent(snapshot)) applySession(data.session);
+      } catch {
+        if (requestGeneration.current.isCurrent(request) && authEventGeneration.current.isCurrent(snapshot)) {
+          setError("We couldn't restore your session. Check your connection and try again.");
+          setLoading(false);
+        }
+      }
+    },
+    signOut: async () => {
+      const request = requestGeneration.current.begin();
+      setLoading(true);
+      setError(null);
+      try {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) throw signOutError;
+        if (requestGeneration.current.isCurrent(request)) {
+          requestGeneration.current.invalidate();
+          applySession(null);
+        }
+      } catch (signOutError) {
+        if (requestGeneration.current.isCurrent(request)) {
+          const { data } = await supabase.auth.getSession();
+          if (requestGeneration.current.isCurrent(request)) {
+            applySession(data.session);
+            setError("We couldn't sign out. Check your connection and try again.");
+          }
+        }
+        throw signOutError;
+      }
+    },
+  }), [loading, session, sessionRevision, draft, stage, wedding, motifDone, error, applySession]);
   return <AccessContext.Provider value={value}>{children}</AccessContext.Provider>;
 }
 
