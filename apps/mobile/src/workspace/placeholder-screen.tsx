@@ -51,8 +51,15 @@ export function MoreScreen() {
     if (signingOut) return;
     setSigningOut(true);
     setError(false);
-    try { await signOut(); }
-    catch { setError(true); setSigningOut(false); }
+    try {
+      await workspace.clearForLogout();
+      await signOut();
+      router.replace("/");
+    } catch {
+      try { await workspace.refreshMemberships(); } catch { /* The workspace error state provides a retry. */ }
+      setError(true);
+      setSigningOut(false);
+    }
   }
 
   return (

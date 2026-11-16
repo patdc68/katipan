@@ -1,9 +1,11 @@
-import { Stack } from "expo-router";
+import { Stack, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccessProvider } from "../onboarding/provider";
 import { WorkspaceProvider } from "../workspace/context";
+import { useAccess } from "../onboarding/provider";
+import { rootStackHistoryKey } from "../workspace/model";
 import {
   PlayfairDisplay_400Regular,
   PlayfairDisplay_500Medium,
@@ -35,9 +37,20 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AccessProvider>
-        <WorkspaceProvider><Stack screenOptions={{ headerShown: false }} /></WorkspaceProvider>
+        <WorkspaceProvider><RootNavigationStack /></WorkspaceProvider>
       </AccessProvider>
       <StatusBar style="dark" />
     </SafeAreaProvider>
   );
+}
+
+function RootNavigationStack() {
+  const { sessionRevision } = useAccess();
+  const segments = useSegments() as string[];
+  const onInvitationAcceptanceRoute = segments[0] === "accept-invitation";
+  return <Stack
+    key={rootStackHistoryKey(sessionRevision, onInvitationAcceptanceRoute)}
+    initialRouteName="index"
+    screenOptions={{ headerShown: false }}
+  />;
 }

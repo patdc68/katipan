@@ -49,6 +49,7 @@ export function CoordinatorOverviewScreen() {
 
   return (
     <KatipanScreen contentContainerStyle={styles.screen}>
+      <KatipanButton label="Back to My Weddings" variant="text" onPress={() => router.replace("/(workspace)/weddings")} />
       <View style={styles.topline}><Brand /><KatipanText variant="labelCaps" color="secondary">CLIENT WEDDING</KatipanText></View>
       <View style={styles.intro}>
         <KatipanText variant="headlineMobile" accessibilityRole="header">{coupleName}</KatipanText>

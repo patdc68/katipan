@@ -7,6 +7,7 @@ import { supabase, hasSupabaseConfig } from "../../auth/client";
 import { signUpWithEmail } from "../../auth/email";
 import { KatipanScreen, KatipanText, KatipanButton, FormField } from "../../ui";
 import { artwork, Brand, EditorialImage } from "../../onboarding/components";
+import { authenticatedRootRoute } from "../../workspace/model";
 
 const credentialsSchema = z.object({ email: z.email("Enter a valid email address."), password: z.string().min(8, "Use at least 8 characters.") });
 export default function Auth() {
@@ -23,12 +24,16 @@ export default function Auth() {
     try {
       const result = mode === "signup" ? await signUpWithEmail(valid.data.email, valid.data.password) : await supabase.auth.signInWithPassword(valid.data);
       if (result.error) throw result.error;
-      if (result.data.session) router.replace("/(access)/create-wedding");
+      if (result.data.session) router.replace(authenticatedRootRoute);
       else setSuccess("Check your email and tap the confirmation link to continue in Katipan.");
     } catch { setError("We couldn't sign you in. Check your email and password, then try again."); }
     finally { setBusy(false); }
   }
   return <KatipanScreen contentContainerStyle={styles.content}>
+    <KatipanButton label="Back to Welcome" variant="text" onPress={() => {
+      if (router.canGoBack()) router.back();
+      else router.replace("/(access)/welcome");
+    }} />
     <Brand /><EditorialImage source={artwork.create} height={180} />
     <KatipanText variant="headlineMobile" accessibilityRole="header">{mode === "signup" ? "Begin your story." : "Welcome back."}</KatipanText>
     <KatipanText color="textMuted">{mode === "signup" ? "Create your Katipan account to start your shared wedding space." : "Sign in to continue planning together."}</KatipanText>

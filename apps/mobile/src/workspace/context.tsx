@@ -1,193 +1,366 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Platform } from "react-native";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AppState, Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { RequestGeneration } from "../auth/session";
 import { useAccess } from "../onboarding/provider";
 import { loadActiveMemberships } from "./api";
 import {
+  AccountScopedWeddingSelection,
   findActiveMembership,
   nextWorkspaceCacheRevision,
-  resolveRestoredSelection,
+  planWorkspaceRestoration,
+  workspaceMembershipsForAccount,
+  workspaceRestorationStatus,
+  workspaceSelectionForAccount,
   type WorkspaceMembership,
+  type WorkspaceRestorationStatus,
 } from "./model";
 
-const SELECTED_WEDDING_KEY = "katipan.selected-wedding-id";
+const LEGACY_SELECTED_WEDDING_KEY = "katipan.selected-wedding-id";
 
-async function readSelectedWeddingId(): Promise<string | null> {
-  try {
-    if (Platform.OS === "web") return globalThis.localStorage?.getItem(SELECTED_WEDDING_KEY) ?? null;
-    return await SecureStore.getItemAsync(SELECTED_WEDDING_KEY);
-  } catch {
-    return null;
+const selectedWeddingStorage = new AccountScopedWeddingSelection({
+  getItem: (key) => Platform.OS === "web"
+    ? Promise.resolve(globalThis.localStorage?.getItem(key) ?? null)
+    : SecureStore.getItemAsync(key),
+  setItem: (key, value) => Platform.OS === "web"
+    ? Promise.resolve(globalThis.localStorage?.setItem(key, value))
+    : SecureStore.setItemAsync(key, value),
+  removeItem: (key) => Platform.OS === "web"
+    ? Promise.resolve(globalThis.localStorage?.removeItem(key))
+    : SecureStore.deleteItemAsync(key),
+}, LEGACY_SELECTED_WEDDING_KEY);
+
+const readSelectedWeddingId = (accountId: string) => selectedWeddingStorage.read(accountId);
+const storeSelectedWeddingId = (accountId: string, weddingId: string | null) => selectedWeddingStorage.write(accountId, weddingId);
+const clearStoredSelection = (accountId: string | null) => selectedWeddingStorage.clear(accountId);
+
+type WorkspaceSnapshot = {
+  accountId: string | null;
+  phase: "loading" | "ready" | "error";
+  memberships: WorkspaceMembership[];
+  selectedWeddingId: string | null;
+  membershipLost: boolean;
+  error: string | null;
+  cacheRevision: number;
+};
+
+const initialSnapshot: WorkspaceSnapshot = {
+  accountId: null,
+  phase: "loading",
+  memberships: [],
+  selectedWeddingId: null,
+  membershipLost: false,
+  error: null,
+  cacheRevision: 0,
+};
+
+export class WorkspaceMembershipLostError extends Error {
+  constructor() {
+    super("Wedding membership is no longer active.");
+    this.name = "WorkspaceMembershipLostError";
   }
 }
 
-async function storeSelectedWeddingId(weddingId: string | null): Promise<void> {
-  try {
-    if (Platform.OS === "web") {
-      if (weddingId) globalThis.localStorage?.setItem(SELECTED_WEDDING_KEY, weddingId);
-      else globalThis.localStorage?.removeItem(SELECTED_WEDDING_KEY);
-    } else if (weddingId) {
-      await SecureStore.setItemAsync(SELECTED_WEDDING_KEY, weddingId);
-    } else {
-      await SecureStore.deleteItemAsync(SELECTED_WEDDING_KEY);
-    }
-  } catch {
-    // The selected Wedding is an optional convenience; RLS-backed restore remains authoritative.
+export class WorkspaceRefreshError extends Error {
+  constructor() {
+    super("Wedding memberships could not be verified.");
+    this.name = "WorkspaceRefreshError";
   }
 }
 
 type WorkspaceContextValue = {
+  status: WorkspaceRestorationStatus;
   loading: boolean;
   error: string | null;
-  memberships: WorkspaceMembership[];
+  memberships: readonly WorkspaceMembership[];
   selectedWeddingId: string | null;
   selectedMembership: WorkspaceMembership | null;
+  membershipLost: boolean;
+  sessionRevision: number;
   cacheRevision: number;
   membershipFor: (weddingId: string) => WorkspaceMembership | null;
   setSelectedWedding: (weddingId: string) => WorkspaceMembership;
   activateWedding: (weddingId: string) => Promise<WorkspaceMembership>;
   refreshMemberships: (preferredWeddingId?: string) => Promise<WorkspaceMembership[]>;
+  clearForLogout: () => Promise<void>;
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const { session, loading: accessLoading } = useAccess();
-  const [memberships, setMemberships] = useState<WorkspaceMembership[]>([]);
-  const [membershipsUserId, setMembershipsUserId] = useState<string | null>(null);
-  const [selectedWeddingId, setSelectedWeddingId] = useState<string | null>(null);
-  const [cacheRevision, setCacheRevision] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [errorUserId, setErrorUserId] = useState<string | null>(null);
+  const { session, sessionRevision, loading: accessLoading, error: accessError } = useAccess();
+  const accountId = session?.user.id ?? null;
+  const accountIdRef = useRef(accountId);
+  const [snapshot, setSnapshot] = useState<WorkspaceSnapshot>(initialSnapshot);
+  const snapshotRef = useRef(snapshot);
+  const requests = useRef(new RequestGeneration());
 
-  useEffect(() => {
-    let current = true;
-    const userId = session?.user.id ?? null;
-    if (accessLoading) return () => { current = false; };
-    if (!userId) {
-      void Promise.resolve().then(() => {
-        if (!current) return;
-        setMemberships([]);
-        setMembershipsUserId(null);
-        setSelectedWeddingId(null);
-        setCacheRevision((revision) => revision + 1);
-        setError(null);
-        setErrorUserId(null);
-        setLoading(false);
-        void storeSelectedWeddingId(null);
+  useLayoutEffect(() => {
+    accountIdRef.current = accountId;
+  }, [accountId]);
+
+  const commit = useCallback((next: WorkspaceSnapshot) => {
+    snapshotRef.current = next;
+    setSnapshot(next);
+  }, []);
+
+  const refreshMemberships = useCallback(async (preferredWeddingId?: string) => {
+    if (!accountId || accountIdRef.current !== accountId) throw new WorkspaceRefreshError();
+    const request = requests.current.begin();
+    const previous = snapshotRef.current;
+    const sameAccount = previous.accountId === accountId;
+    const starting: WorkspaceSnapshot = sameAccount
+      ? { ...previous, phase: "loading", error: null }
+      : {
+        accountId,
+        phase: "loading",
+        memberships: [],
+        selectedWeddingId: null,
+        membershipLost: false,
+        error: null,
+        cacheRevision: previous.cacheRevision + 1,
+      };
+
+    if (!sameAccount && previous.accountId) void clearStoredSelection(previous.accountId);
+    commit(starting);
+
+    let memberships: WorkspaceMembership[];
+    let savedWeddingId: string | null;
+    try {
+      [memberships, savedWeddingId] = await Promise.all([
+        loadActiveMemberships(accountId),
+        readSelectedWeddingId(accountId),
+      ]);
+    } catch {
+      if (!requests.current.isCurrent(request) || accountIdRef.current !== accountId) {
+        throw new WorkspaceRefreshError();
+      }
+      const latest = snapshotRef.current;
+      const retainVerifiedAccount = latest.accountId === accountId;
+      commit({
+        accountId,
+        phase: "error",
+        memberships: retainVerifiedAccount ? latest.memberships : [],
+        selectedWeddingId: retainVerifiedAccount ? latest.selectedWeddingId : null,
+        membershipLost: retainVerifiedAccount ? latest.membershipLost : false,
+        error: "We couldn't load your Wedding workspaces. Check your connection and try again.",
+        cacheRevision: latest.cacheRevision,
       });
-      return () => { current = false; };
+      throw new WorkspaceRefreshError();
     }
 
-    void Promise.resolve().then(async () => {
-      if (!current) return;
-      setLoading(true);
-      setError(null);
-      setErrorUserId(userId);
-      try {
-        const [activeMemberships, savedId] = await Promise.all([loadActiveMemberships(userId), readSelectedWeddingId()]);
-        if (!current) return;
-        const selection = resolveRestoredSelection(savedId, activeMemberships);
-        setMemberships(activeMemberships);
-        setMembershipsUserId(userId);
-        setSelectedWeddingId(selection);
-        setCacheRevision((revision) => revision + 1);
-        void storeSelectedWeddingId(selection);
-      } catch {
-        if (!current) return;
-        setMemberships([]);
-        setMembershipsUserId(userId);
-        setSelectedWeddingId(null);
-        setError("We couldn't load your Wedding workspaces. Check your connection and try again.");
-        setErrorUserId(userId);
-      } finally {
-        if (current) setLoading(false);
+    if (!requests.current.isCurrent(request) || accountIdRef.current !== accountId) {
+      throw new WorkspaceRefreshError();
+    }
+
+    const activeMembership = preferredWeddingId
+      ? findActiveMembership(memberships, preferredWeddingId)
+      : null;
+    const previousSelectedId = sameAccount ? previous.selectedWeddingId : null;
+    const restorePlan = planWorkspaceRestoration({
+      accountChanged: !sameAccount,
+      memberships,
+      savedWeddingId,
+      previousWeddingId: previousSelectedId,
+    });
+    const selectedWeddingId = activeMembership?.weddingId ?? restorePlan.selectedWeddingId;
+    const membershipLost = restorePlan.membershipLost;
+    const cacheRevision = sameAccount
+      ? nextWorkspaceCacheRevision(previous.cacheRevision, previousSelectedId, selectedWeddingId)
+      : starting.cacheRevision;
+
+    commit({
+      accountId,
+      phase: "ready",
+      memberships,
+      selectedWeddingId,
+      membershipLost,
+      error: null,
+      cacheRevision,
+    });
+    await storeSelectedWeddingId(accountId, selectedWeddingId);
+
+    if (!requests.current.isCurrent(request) || accountIdRef.current !== accountId) {
+      throw new WorkspaceRefreshError();
+    }
+    if (preferredWeddingId && !activeMembership) throw new WorkspaceMembershipLostError();
+    return memberships;
+  }, [accountId, commit]);
+
+  useEffect(() => {
+    if (!accountId) return;
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active" && accountIdRef.current === accountId) {
+        void refreshMemberships().catch(() => undefined);
       }
     });
-    return () => { current = false; };
-  }, [accessLoading, session?.user.id]);
+    return () => subscription.remove();
+  }, [accountId, refreshMemberships]);
 
-  const sessionUserId = session?.user.id ?? null;
-  const dataBelongsToSession = Boolean(sessionUserId && membershipsUserId === sessionUserId);
-  const currentMemberships = useMemo(() => dataBelongsToSession ? memberships : [], [dataBelongsToSession, memberships]);
-  const currentSelectedWeddingId = dataBelongsToSession ? selectedWeddingId : null;
-  const currentError = errorUserId === sessionUserId ? error : null;
-  const currentLoading = accessLoading || Boolean(sessionUserId && (!dataBelongsToSession || loading));
+  useEffect(() => {
+    if (accessLoading || accessError) return;
+    if (!accountId) {
+      const previous = snapshotRef.current;
+      requests.current.invalidate();
+      commit({
+        ...initialSnapshot,
+        phase: "ready",
+        cacheRevision: previous.cacheRevision + (previous.accountId || previous.selectedWeddingId ? 1 : 0),
+      });
+      void clearStoredSelection(previous.accountId);
+      return;
+    }
+
+    let active = true;
+    const request = requests.current.begin();
+    const previous = snapshotRef.current;
+    if (previous.accountId !== accountId && previous.accountId) void clearStoredSelection(previous.accountId);
+    const starting: WorkspaceSnapshot = previous.accountId === accountId
+      ? { ...previous, phase: "loading", error: null }
+      : {
+        accountId,
+        phase: "loading",
+        memberships: [],
+        selectedWeddingId: null,
+        membershipLost: false,
+        error: null,
+        cacheRevision: previous.cacheRevision + 1,
+      };
+    commit(starting);
+
+    void (async () => {
+      let memberships: WorkspaceMembership[];
+      let savedWeddingId: string | null;
+      try {
+        [memberships, savedWeddingId] = await Promise.all([
+          loadActiveMemberships(accountId),
+          readSelectedWeddingId(accountId),
+        ]);
+      } catch {
+        if (!active || !requests.current.isCurrent(request) || accountIdRef.current !== accountId) return;
+        const latest = snapshotRef.current;
+        const retainVerifiedAccount = latest.accountId === accountId;
+        commit({
+          accountId,
+          phase: "error",
+          memberships: retainVerifiedAccount ? latest.memberships : [],
+          selectedWeddingId: retainVerifiedAccount ? latest.selectedWeddingId : null,
+          membershipLost: retainVerifiedAccount ? latest.membershipLost : false,
+          error: "We couldn't load your Wedding workspaces. Check your connection and try again.",
+          cacheRevision: latest.cacheRevision,
+        });
+        return;
+      }
+
+      if (!active || !requests.current.isCurrent(request) || accountIdRef.current !== accountId) return;
+      const previousSelectedId = previous.accountId === accountId ? previous.selectedWeddingId : null;
+      const restorePlan = planWorkspaceRestoration({
+        accountChanged: previous.accountId !== accountId,
+        memberships,
+        savedWeddingId,
+        previousWeddingId: previousSelectedId,
+      });
+      const selectedWeddingId = restorePlan.selectedWeddingId;
+      const membershipLost = restorePlan.membershipLost;
+      const cacheRevision = previous.accountId === accountId
+        ? nextWorkspaceCacheRevision(previous.cacheRevision, previousSelectedId, selectedWeddingId)
+        : starting.cacheRevision;
+
+      commit({
+        accountId,
+        phase: "ready",
+        memberships,
+        selectedWeddingId,
+        membershipLost,
+        error: null,
+        cacheRevision,
+      });
+      await storeSelectedWeddingId(accountId, selectedWeddingId);
+    })();
+
+    return () => {
+      active = false;
+      requests.current.invalidate();
+    };
+  }, [accessError, accessLoading, accountId, sessionRevision, commit]);
+
+  const currentMemberships = workspaceMembershipsForAccount(snapshot, accountId);
+  const currentSelectedWeddingId = workspaceSelectionForAccount(snapshot, accountId);
+  const currentStatus = workspaceRestorationStatus({
+    accessLoading,
+    accessError,
+    accountId,
+    snapshot,
+  });
+  const currentError = accessError ?? (accountId && snapshot.accountId === accountId ? snapshot.error : null);
 
   const membershipFor = useCallback(
     (weddingId: string) => findActiveMembership(currentMemberships, weddingId),
     [currentMemberships],
   );
 
-  const refreshMemberships = useCallback(async (preferredWeddingId?: string) => {
-    const userId = session?.user.id;
-    if (!userId) throw new Error("A signed-in account is required.");
-    setLoading(true);
-    setError(null);
-    try {
-      const activeMemberships = await loadActiveMemberships(userId);
-      const savedId = preferredWeddingId ?? await readSelectedWeddingId();
-      const selection = preferredWeddingId
-        ? findActiveMembership(activeMemberships, preferredWeddingId)?.weddingId ?? null
-        : resolveRestoredSelection(savedId, activeMemberships);
-      setMemberships(activeMemberships);
-      setMembershipsUserId(userId);
-      if (preferredWeddingId && !selection) {
-        setSelectedWeddingId(null);
-        setCacheRevision((revision) => revision + 1);
-        await storeSelectedWeddingId(null);
-        throw new Error("Wedding membership is no longer active.");
-      }
-      setSelectedWeddingId(selection);
-      setCacheRevision((revision) => revision + 1);
-      setError(null);
-      setErrorUserId(userId);
-      await storeSelectedWeddingId(selection);
-      return activeMemberships;
-    } catch {
-      setError("We couldn't verify that Wedding workspace. Refresh your memberships and try again.");
-      setErrorUserId(userId);
-      setMembershipsUserId(userId);
-      setMemberships([]);
-      setSelectedWeddingId(null);
-      throw new Error("Wedding membership could not be verified.");
-    } finally {
-      setLoading(false);
+  const setSelectedWedding = useCallback((weddingId: string) => {
+    const membership = findActiveMembership(currentMemberships, weddingId);
+    if (!membership || !accountId) throw new WorkspaceMembershipLostError();
+    const current = snapshotRef.current;
+    if (current.accountId !== accountId) throw new WorkspaceMembershipLostError();
+    if (current.selectedWeddingId !== weddingId) {
+      requests.current.invalidate();
+      commit({
+        ...current,
+        phase: "ready",
+        selectedWeddingId: weddingId,
+        membershipLost: false,
+        error: null,
+        cacheRevision: nextWorkspaceCacheRevision(current.cacheRevision, current.selectedWeddingId, weddingId),
+      });
+      void storeSelectedWeddingId(accountId, weddingId);
     }
-  }, [session?.user.id]);
+    return membership;
+  }, [accountId, commit, currentMemberships]);
 
   const activateWedding = useCallback(async (weddingId: string) => {
     const activeMemberships = await refreshMemberships(weddingId);
     const membership = findActiveMembership(activeMemberships, weddingId);
-    if (!membership) throw new Error("Wedding membership could not be verified.");
+    if (!membership) throw new WorkspaceMembershipLostError();
     return membership;
   }, [refreshMemberships]);
 
-  const setSelectedWedding = useCallback((weddingId: string) => {
-    const membership = findActiveMembership(currentMemberships, weddingId);
-    if (!membership) throw new Error("Wedding membership is unavailable.");
-    if (currentSelectedWeddingId !== weddingId) setCacheRevision((revision) => nextWorkspaceCacheRevision(revision, currentSelectedWeddingId, weddingId));
-    setSelectedWeddingId(weddingId);
-    void storeSelectedWeddingId(weddingId);
-    return membership;
-  }, [currentMemberships, currentSelectedWeddingId]);
+  const clearForLogout = useCallback(async () => {
+    const previous = snapshotRef.current;
+    requests.current.invalidate();
+    commit({
+      accountId,
+      phase: "loading",
+      memberships: [],
+      selectedWeddingId: null,
+      membershipLost: false,
+      error: null,
+      cacheRevision: previous.cacheRevision + (previous.selectedWeddingId || previous.memberships.length ? 1 : 0),
+    });
+    await clearStoredSelection(accountId);
+  }, [accountId, commit]);
 
   const selectedMembership = currentSelectedWeddingId ? membershipFor(currentSelectedWeddingId) : null;
   const value = useMemo<WorkspaceContextValue>(() => ({
-    loading: currentLoading,
+    status: currentStatus,
+    loading: currentStatus === "AUTH_LOADING" || currentStatus === "AUTHENTICATED_WORKSPACE_LOADING",
     error: currentError,
     memberships: currentMemberships,
     selectedWeddingId: currentSelectedWeddingId,
     selectedMembership,
-    cacheRevision,
+    membershipLost: accountId && snapshot.accountId === accountId ? snapshot.membershipLost : false,
+    sessionRevision,
+    cacheRevision: snapshot.cacheRevision,
     membershipFor,
     setSelectedWedding,
     activateWedding,
     refreshMemberships,
+    clearForLogout,
   }), [
-    currentLoading, currentError, currentMemberships, currentSelectedWeddingId, selectedMembership, cacheRevision,
-    membershipFor, setSelectedWedding, activateWedding, refreshMemberships,
+    currentStatus, currentError, currentMemberships, currentSelectedWeddingId, selectedMembership,
+    accountId, snapshot.accountId, snapshot.membershipLost, snapshot.cacheRevision, sessionRevision,
+    membershipFor, setSelectedWedding, activateWedding, refreshMemberships, clearForLogout,
   ]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

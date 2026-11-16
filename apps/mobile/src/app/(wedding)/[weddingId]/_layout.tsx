@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { Redirect, Tabs, useLocalSearchParams } from "expo-router";
-import { Text } from "react-native";
+import { Redirect, Tabs, useLocalSearchParams, useSegments } from "expo-router";
+import { BackHandler, Platform, Text } from "react-native";
 import { colorTokens as c, fontTokens } from "@katipan/ui";
 import { useAccess } from "../../../onboarding/provider";
 import { useWorkspace } from "../../../workspace/context";
-import { destinationAfterRestore, isCurrentWeddingWorkspace } from "../../../workspace/model";
+import { isCoupleHomeRoot, isCurrentWeddingWorkspace } from "../../../workspace/model";
 import { ErrorState, KatipanScreen, LoadingState } from "../../../ui";
 
 export default function WeddingTabsLayout() {
@@ -12,6 +12,8 @@ export default function WeddingTabsLayout() {
   const weddingId = Array.isArray(params.weddingId) ? params.weddingId[0] ?? "" : params.weddingId ?? "";
   const access = useAccess();
   const workspace = useWorkspace();
+  const segments = useSegments() as string[];
+  const isHomeRoot = isCoupleHomeRoot(segments);
   const membership = workspace.membershipFor(weddingId);
   const { selectedWeddingId, setSelectedWedding } = workspace;
 
@@ -21,21 +23,26 @@ export default function WeddingTabsLayout() {
     }
   }, [membership, weddingId, selectedWeddingId, setSelectedWedding]);
 
-  if (access.loading || (access.session && workspace.loading)) return <KatipanScreen><LoadingState label="Restoring your Wedding…" /></KatipanScreen>;
+  useEffect(() => {
+    if (Platform.OS !== "android" || !isHomeRoot) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => subscription.remove();
+  }, [isHomeRoot]);
+
+  if (access.loading || workspace.status === "AUTH_LOADING" || workspace.status === "AUTHENTICATED_WORKSPACE_LOADING") {
+    return <KatipanScreen><LoadingState label="Restoring your Wedding…" /></KatipanScreen>;
+  }
   if (!access.session) return <Redirect href="/(access)/welcome" />;
   if (access.error) return <KatipanScreen><ErrorState description={access.error} onRetry={() => void access.refresh()} /></KatipanScreen>;
-  if (workspace.error) return <KatipanScreen><ErrorState description={workspace.error} onRetry={() => void workspace.refreshMemberships()} /></KatipanScreen>;
+  if (workspace.status === "RECOVERABLE_ERROR") return <KatipanScreen><ErrorState description={workspace.error ?? "We couldn't verify your Wedding membership. Check your connection and try again."} onRetry={() => void workspace.refreshMemberships()} /></KatipanScreen>;
   if (!membership) {
-    const destination = destinationAfterRestore(true, workspace.memberships);
-    return destination === "create-wedding"
-      ? <Redirect href="/(access)/create-wedding" />
-      : <Redirect href="/(workspace)/weddings" />;
+    return <Redirect href="/(workspace)/weddings" />;
   }
   if (!isCurrentWeddingWorkspace(membership, selectedWeddingId, weddingId)) return <KatipanScreen><LoadingState label="Opening your Wedding…" /></KatipanScreen>;
 
   return (
     <Tabs
-      key={`${weddingId}:${workspace.cacheRevision}`}
+      key={`${workspace.sessionRevision}:${weddingId}:${workspace.cacheRevision}`}
       initialRouteName="home"
       screenOptions={{
         headerShown: false,
