@@ -8,6 +8,8 @@ Agent 00 maintains this ledger. Updated 2026-11-16 for the R1 Core Workspace res
 | --- | --- |
 | Current phase | R1 Core Workspace — PENDING PHYSICAL QA |
 | Foundation branch/base | `feat/r1-core-workspace` from updated `origin/master` (`8c85122`) |
+| R1 implementation commit | `4528f23` — `fix: stabilize core Wedding workspace` |
+| R1 QA evidence | `docs/qa/r1-core-workspace.md`; Gate 1 block in `docs/rework/qa-gates.md` |
 | Preserved work | wip/pre-rework-journey-a-20261116 at 4c44a01; pushed and verified during preflight |
 | Local state | `.codex/config.toml` classified `KEEP_LOCAL_UNCOMMITTED`; observed as 6 added lines before branch creation and left unchanged/unstaged |
 | Completed agent slices | R0 foundation; R1 Agent 00 preflight/reservation, Agent 02 read-only audit, Agent 01 Stitch contract, Agent 03 implementation, and Agent 10 automated QA. Agent 00 final disposition recorded as PENDING PHYSICAL QA |

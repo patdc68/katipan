@@ -3,7 +3,7 @@
 **QA recommendation:** PENDING PHYSICAL QA
 **Run date:** 2026-11-16
 **Branch:** `feat/r1-core-workspace`
-**Tested source:** `HEAD` `8c85122` plus the uncommitted R1 working-tree changes listed by `git status` during this run. The QA result covers that working tree, not the base commit by itself.
+**Tested source:** Commit `4528f23` (`fix: stabilize core Wedding workspace`), containing the same app/test code validated in the working tree based on `8c85122`. No app code changed after validation.
 **Physical target:** None available. `adb devices` could not run because `adb` is not on PATH. Android Studio had no running window and its UI launch timed out during preflight. No device, emulator, development-client build, QA account, or Wedding fixture was used. No DEV state was created or changed.
 
 ## Automated validation
